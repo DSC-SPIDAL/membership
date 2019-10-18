@@ -1,6 +1,5 @@
 package org.twister2.storage.io;
 
-import edu.iu.dsc.tws.api.comms.messaging.types.MessageTypes;
 import edu.iu.dsc.tws.api.comms.structs.Tuple;
 
 import java.io.IOException;
@@ -9,8 +8,6 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Read a tweetid:time
@@ -21,10 +18,19 @@ public class TwitterInputReader {
    */
   private String fileName;
 
+  /**
+   * The input buffer
+   */
   private ByteBuffer inputBuffer;
 
+  /**
+   * Total bytes read so far
+   */
   private long totalRead = 0;
 
+  /**
+   * The read channel
+   */
   private  FileChannel rwChannel;
 
   public TwitterInputReader(String file) {
@@ -34,34 +40,40 @@ public class TwitterInputReader {
 
     try {
       rwChannel = new RandomAccessFile(outFileName, "rw").getChannel();
-      ByteBuffer os = rwChannel.map(FileChannel.MapMode.READ_ONLY, 0, rwChannel.size());
+      inputBuffer = rwChannel.map(FileChannel.MapMode.READ_ONLY, 0, rwChannel.size());
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
   }
 
-  Tuple<BigInteger, Long> next() {
-    String outFileName = Paths.get(fileName).toString();
+  public Tuple<BigInteger, Long> next() {
     try {
-      List<Tuple> keyValues = new ArrayList<>();
-      // lets read the key values
-      int count = 0;
-      while (totalRead < rwChannel.size()) {
+      if (totalRead < rwChannel.size()) {
+        // read the size of the big int
+        int size = inputBuffer.getInt();
+        byte[] intBuffer = new byte[size];
 
+        BigInteger tweetId = new BigInteger(intBuffer);
+        long time = inputBuffer.getLong();
+        totalRead += size + Integer.BYTES + Long.BYTES;
+        return new Tuple<>(tweetId, time);
       }
-      rwChannel.force(true);
-      rwChannel.close();
-      return null;
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
+    return null;
   }
 
-  boolean hasNext() throws Exception {
+  public boolean hasNext() throws Exception {
     try {
       return totalRead < rwChannel.size();
     } catch (IOException e) {
       throw new Exception("Failed to read file", e);
     }
+  }
+
+  public void close() throws Exception {
+    rwChannel.force(true);
+    rwChannel.close();
   }
 }
