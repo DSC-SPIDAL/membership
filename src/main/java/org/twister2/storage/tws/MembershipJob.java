@@ -27,11 +27,14 @@ import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.logging.Logger;
 
 /**
  * Finding the membership
  */
 public class MembershipJob implements IWorker, Serializable {
+  private static final Logger LOG = Logger.getLogger(MembershipJob.class.getName());
+
   public static void main(String[] args) {
     Config config = ResourceAllocator.loadConfig(new HashMap<>());
 
@@ -53,12 +56,13 @@ public class MembershipJob implements IWorker, Serializable {
                       IVolatileVolume volatileVolume) {
     BatchTSetEnvironment batchEnv = BatchTSetEnvironment.initBatch(WorkerEnvironment.init(
         config, workerID, workerController, persistentVolume, volatileVolume));
+    int wId = workerID;
     // first we are going to read the files and sort them
     batchEnv.createSource(new SourceFunc<Tuple<BigInteger, Long>>() {
       TwitterInputReader reader;
       @Override
       public void prepare(TSetContext context) {
-        reader = new TwitterInputReader("/tmp/input" + context.getIndex());
+        reader = new TwitterInputReader("/tmp/input-" + context.getIndex());
       }
 
       @Override
@@ -85,10 +89,14 @@ public class MembershipJob implements IWorker, Serializable {
       }
     }).keyedGather().sink(new SinkFunc<Iterator<Tuple<BigInteger, Iterator<Long>>>>() {
       TweetBufferedOutputWriter writer;
+
+      TSetContext context;
+
       @Override
       public void prepare(TSetContext context) {
         try {
           writer = new TweetBufferedOutputWriter("/tmp/outfile-" + context.getIndex());
+          this.context = context;
         } catch (FileNotFoundException e) {
           throw new RuntimeException("Failed to write", e);
         }
@@ -98,7 +106,8 @@ public class MembershipJob implements IWorker, Serializable {
       public boolean add(Iterator<Tuple<BigInteger, Iterator<Long>>> value) {
         while(value.hasNext()) {
           try {
-            writer.write(value.next().getKey(), value.next().getValue().next());
+            Tuple<BigInteger, Iterator<Long>> next = value.next();
+            writer.write(next.getKey(), next.getValue().next());
           } catch (Exception e) {
             throw new RuntimeException("Failed to write", e);
           }
@@ -114,7 +123,7 @@ public class MembershipJob implements IWorker, Serializable {
 
       @Override
       public void prepare(TSetContext context) {
-        reader = new TwitterInputReader("/tmp/second-input" + context.getIndex());
+        reader = new TwitterInputReader("/tmp/second-input-" + context.getIndex());
       }
 
       @Override
@@ -134,7 +143,17 @@ public class MembershipJob implements IWorker, Serializable {
           throw new RuntimeException();
         }
       }
-    }, 4).cache();
+    }, 4).mapToTuple(new MapFunc<Tuple<BigInteger, Long>, Tuple<BigInteger, Long>>() {
+      @Override
+      public Tuple<BigInteger, Long> map(Tuple<BigInteger, Long> input) {
+        return input;
+      }
+    }).keyedGather().flatmap(new FlatMapFunc<Tuple<BigInteger, Long>, Tuple<BigInteger, Iterator<Long>>>() {
+      @Override
+      public void flatMap(Tuple<BigInteger, Iterator<Long>> input, RecordCollector<Tuple<BigInteger, Long>> collector) {
+        collector.collect(new Tuple<>(input.getKey(), input.getValue().next()));
+      }
+    }).cache();
 
     BatchTSet<Tuple<BigInteger, Long>> savedInput = batchEnv.createSource(new SourceFunc<Tuple<BigInteger, Long>>() {
       TwitterInputReader reader;
@@ -164,25 +183,35 @@ public class MembershipJob implements IWorker, Serializable {
 
 
     BatchTSet<String> b = savedInput.direct().flatmap(new FlatMapFunc<String, Tuple<BigInteger, Long>>() {
-      Map<BigInteger, Long> inputMap = new HashMap<>();
+      Map<String, Long> inputMap = new HashMap<>();
+
+      TSetContext context;
 
       @Override
       public void prepare(TSetContext context) {
+        this.context = context;
         DataPartition a = context.getInput("input");
         DataPartitionConsumer<Tuple<BigInteger, Long>> consumer = a.getConsumer();
         while (consumer.hasNext()) {
           Tuple<BigInteger, Long> bigIntegerLongTuple = consumer.next();
-          inputMap.put(bigIntegerLongTuple.getKey(), bigIntegerLongTuple.getValue());
+          inputMap.put(bigIntegerLongTuple.getKey().toString(), bigIntegerLongTuple.getValue());
         }
       }
 
       @Override
       public void flatMap(Tuple<BigInteger, Long> input, RecordCollector<String> collector) {
-        if (inputMap.containsKey(input.getKey())) {
+        if (inputMap.containsKey(input.getKey().toString())) {
           try {
             collector.collect(input.getKey().toString() + "," + input.getValue());
           } catch (Exception e) {
             throw new RuntimeException(e);
+          }
+          if (wId == 0) {
+            LOG.info(String.format("******* CONTAIN %s", input.getKey().toString()));
+          }
+        } else {
+          if (wId == 0) {
+            LOG.info(String.format("******* NOT CONTAIN %s %s", input.getKey().toString(), inputMap.toString()));
           }
         }
       }

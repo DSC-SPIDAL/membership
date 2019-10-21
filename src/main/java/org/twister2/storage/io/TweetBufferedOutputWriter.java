@@ -1,6 +1,8 @@
 package org.twister2.storage.io;
 
+import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import edu.iu.dsc.tws.api.comms.structs.Tuple;
 
 import java.io.*;
 import java.math.BigInteger;
@@ -18,7 +20,9 @@ public class TweetBufferedOutputWriter {
   public void write(BigInteger b, Long l) throws Exception {
     byte[] bigInts = b.toByteArray();
     byte[] timeBytes = Longs.toByteArray(l);
+    int size = bigInts.length;
     try {
+      this.out.write(Ints.toByteArray(size));
       this.out.write(bigInts);
       this.out.write(timeBytes);
     } catch (IOException e) {
@@ -44,12 +48,23 @@ public class TweetBufferedOutputWriter {
   }
 
   public static void main(String[] args) throws IOException {
-    for (int pic = 0; pic < 4; pic++) {
-      PrintWriter pw = new PrintWriter(new FileWriter("input-" + pic));
-      for (int i = 0; i < 1000; i++) {
-        pw.println(i + "," + pic);
+    try {
+      TweetBufferedOutputWriter outputWriter = new TweetBufferedOutputWriter("/tmp/input-" + 0);
+      BigInteger start = new BigInteger("100000000000000000").multiply(new BigInteger("" + 0));
+      // now write 1000,000
+      for (int i = 0; i < 10; i++) {
+        BigInteger bi = start.add(new BigInteger(i + ""));
+        outputWriter.write(bi, 0l);
       }
-      pw.close();
+      outputWriter.close();
+
+
+      TwitterInputReader reader = new TwitterInputReader("/tmp/input-0");
+      while (reader.hasNext()) {
+        Tuple<BigInteger, Long> t = reader.next();
+      }
+    } catch (Exception e) {
+      throw new RuntimeException(e);
     }
   }
 }

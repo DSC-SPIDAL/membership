@@ -8,11 +8,13 @@ import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Paths;
+import java.util.logging.Logger;
 
 /**
  * Read a tweetid:time
  */
 public class TwitterInputReader {
+  private static final Logger LOG = Logger.getLogger(TwitterInputReader.class.getName());
   /**
    * Name of the file to read
    */
@@ -37,10 +39,10 @@ public class TwitterInputReader {
     this.fileName = file;
 
     String outFileName = Paths.get(fileName).toString();
-
     try {
       rwChannel = new RandomAccessFile(outFileName, "rw").getChannel();
       inputBuffer = rwChannel.map(FileChannel.MapMode.READ_ONLY, 0, rwChannel.size());
+      LOG.info("Reading file: " + fileName + " size: " + rwChannel.size());
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -52,6 +54,8 @@ public class TwitterInputReader {
         // read the size of the big int
         int size = inputBuffer.getInt();
         byte[] intBuffer = new byte[size];
+
+        inputBuffer.get(intBuffer);
 
         BigInteger tweetId = new BigInteger(intBuffer);
         long time = inputBuffer.getLong();
