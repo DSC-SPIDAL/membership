@@ -206,13 +206,6 @@ public class MembershipJob implements IWorker, Serializable {
           } catch (Exception e) {
             throw new RuntimeException(e);
           }
-          if (wId == 0) {
-            LOG.info(String.format("******* CONTAIN %s", input.getKey().toString()));
-          }
-        } else {
-          if (wId == 0) {
-            LOG.info(String.format("******* NOT CONTAIN %s %s", input.getKey().toString(), inputMap.toString()));
-          }
         }
       }
     });
