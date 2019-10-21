@@ -61,5 +61,10 @@
             <artifactId>taskscheduler-java</artifactId>
             <version>0.3.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.twister2</groupId>
+            <artifactId>tset-java</artifactId>
+            <version>0.3.0</version>
+    </dependency>
     </dependencies>
 </project>

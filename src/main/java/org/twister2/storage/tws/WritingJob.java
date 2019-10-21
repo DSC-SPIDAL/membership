@@ -1,0 +1,47 @@
+package org.twister2.storage.tws;
+
+import edu.iu.dsc.tws.api.JobConfig;
+import edu.iu.dsc.tws.api.Twister2Job;
+import edu.iu.dsc.tws.api.config.Config;
+import edu.iu.dsc.tws.api.resource.*;
+import edu.iu.dsc.tws.rsched.core.ResourceAllocator;
+import edu.iu.dsc.tws.rsched.job.Twister2Submitter;
+import org.twister2.storage.io.TweetBufferedOutputWriter;
+
+import java.math.BigInteger;
+import java.util.HashMap;
+
+public class WritingJob implements IWorker {
+  @Override
+  public void execute(Config config, int workerID,
+                      IWorkerController workerController,
+                      IPersistentVolume persistentVolume,
+                      IVolatileVolume volatileVolume) {
+    try {
+      TweetBufferedOutputWriter outputWriter = new TweetBufferedOutputWriter("/tmp/second-input-" + workerID);
+      BigInteger start = new BigInteger("100000000000000000").multiply(new BigInteger("" + workerID));
+      // now write 1000,000
+      for (int i = 0; i < 1000; i++) {
+        BigInteger bi = start.add(new BigInteger(i + ""));
+        outputWriter.write(bi, 0l);
+      }
+      outputWriter.close();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static void main(String[] args) {
+    Config config = ResourceAllocator.loadConfig(new HashMap<>());
+
+    Twister2Job twister2Job;
+    twister2Job = Twister2Job.newBuilder()
+        .setJobName(WritingJob.class.getName())
+        .setWorkerClass(WritingJob.class)
+        .addComputeResource(1, 1024, 4)
+        .setConfig(new JobConfig())
+        .build();
+    // now submit the job
+    Twister2Submitter.submitJob(twister2Job, config);
+  }
+}

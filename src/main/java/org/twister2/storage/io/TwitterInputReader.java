@@ -46,7 +46,7 @@ public class TwitterInputReader {
     }
   }
 
-  public Tuple<BigInteger, Long> next() {
+  public Tuple<BigInteger, Long> next() throws Exception {
     try {
       if (totalRead < rwChannel.size()) {
         // read the size of the big int
@@ -59,7 +59,7 @@ public class TwitterInputReader {
         return new Tuple<>(tweetId, time);
       }
     } catch (IOException e) {
-      throw new RuntimeException(e);
+      throw new Exception(e);
     }
     return null;
   }
