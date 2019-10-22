@@ -9,13 +9,11 @@ import edu.iu.dsc.tws.api.dataset.DataPartitionConsumer;
 import edu.iu.dsc.tws.api.resource.*;
 import edu.iu.dsc.tws.api.tset.RecordCollector;
 import edu.iu.dsc.tws.api.tset.Storable;
-import edu.iu.dsc.tws.api.tset.TBase;
 import edu.iu.dsc.tws.api.tset.TSetContext;
 import edu.iu.dsc.tws.api.tset.fn.FlatMapFunc;
 import edu.iu.dsc.tws.api.tset.fn.MapFunc;
 import edu.iu.dsc.tws.api.tset.fn.SinkFunc;
 import edu.iu.dsc.tws.api.tset.fn.SourceFunc;
-import edu.iu.dsc.tws.api.tset.sets.batch.BatchTSet;
 import edu.iu.dsc.tws.rsched.core.ResourceAllocator;
 import edu.iu.dsc.tws.rsched.job.Twister2Submitter;
 import edu.iu.dsc.tws.tset.env.BatchTSetEnvironment;
@@ -38,6 +36,8 @@ import java.util.logging.Logger;
 public class MembershipJob implements IWorker, Serializable {
   private static final Logger LOG = Logger.getLogger(MembershipJob.class.getName());
 
+  private static int parallel = 10;
+
   public static void main(String[] args) {
     Config config = ResourceAllocator.loadConfig(new HashMap<>());
 
@@ -45,7 +45,7 @@ public class MembershipJob implements IWorker, Serializable {
     twister2Job = Twister2Job.newBuilder()
         .setJobName(MembershipJob.class.getName())
         .setWorkerClass(MembershipJob.class)
-        .addComputeResource(1, 2048, 4)
+        .addComputeResource(1, 2048, 10)
         .setConfig(new JobConfig())
         .build();
     // now submit the job
@@ -86,7 +86,7 @@ public class MembershipJob implements IWorker, Serializable {
           throw new RuntimeException("Failed to read next", e);
         }
       }
-    }, 4).mapToTuple(new MapFunc<Tuple<BigInteger, Long>, Tuple<BigInteger, Long>>() {
+    }, parallel).mapToTuple(new MapFunc<Tuple<BigInteger, Long>, Tuple<BigInteger, Long>>() {
       @Override
       public Tuple<BigInteger, Long> map(Tuple<BigInteger, Long> input) {
         return input;
@@ -149,7 +149,7 @@ public class MembershipJob implements IWorker, Serializable {
           throw new RuntimeException();
         }
       }
-    }, 4).mapToTuple(new MapFunc<Tuple<BigInteger, Long>, Tuple<BigInteger, Long>>() {
+    }, 10).mapToTuple(new MapFunc<Tuple<BigInteger, Long>, Tuple<BigInteger, Long>>() {
       @Override
       public Tuple<BigInteger, Long> map(Tuple<BigInteger, Long> input) {
         return input;
@@ -185,7 +185,7 @@ public class MembershipJob implements IWorker, Serializable {
           throw new RuntimeException("Failed to read", e);
         }
       }
-    }, 4);
+    }, 10);
 
 
     SinkTSet<Iterator<String>> sink = savedInput.direct().flatmap(new FlatMapFunc<String, Tuple<BigInteger, Long>>() {
