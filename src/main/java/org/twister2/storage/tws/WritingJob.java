@@ -53,7 +53,7 @@ public class WritingJob implements IWorker {
     twister2Job = Twister2Job.newBuilder()
         .setJobName(WritingJob.class.getName())
         .setWorkerClass(WritingJob.class)
-        .addComputeResource(1, 1024, 40)
+        .addComputeResource(1, 24000, 40)
         .setConfig(new JobConfig())
         .build();
     // now submit the job
