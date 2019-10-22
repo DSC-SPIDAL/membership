@@ -17,11 +17,12 @@ import org.twister2.storage.io.TweetBufferedOutputWriter;
 import org.twister2.storage.io.TwitterInputReader;
 
 import java.io.FileNotFoundException;
+import java.io.Serializable;
 import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Iterator;
 
-public class InputPartitionJob implements IWorker {
+public class InputPartitionJob implements IWorker, Serializable {
   private static int parallel = 10;
 
   public static void main(String[] args) {
