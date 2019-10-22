@@ -10,8 +10,11 @@ import org.twister2.storage.io.TweetBufferedOutputWriter;
 
 import java.math.BigInteger;
 import java.util.HashMap;
+import java.util.logging.Logger;
 
 public class WritingJob implements IWorker {
+  private static final Logger LOG = Logger.getLogger(WritingJob.class.getName());
+
   @Override
   public void execute(Config config, int workerID,
                       IWorkerController workerController,
@@ -23,6 +26,9 @@ public class WritingJob implements IWorker {
       // now write 1000,000
       for (int i = 0; i < 100000000; i++) {
         BigInteger bi = start.add(new BigInteger(i + ""));
+        if (i % 1000000 == 0) {
+          LOG.info("Wrote elements: " + i);
+        }
         outputWriter.write(bi, (long) workerID);
       }
       outputWriter.close();
