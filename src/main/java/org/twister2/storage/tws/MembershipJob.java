@@ -45,7 +45,7 @@ public class MembershipJob implements IWorker, Serializable {
     twister2Job = Twister2Job.newBuilder()
         .setJobName(MembershipJob.class.getName())
         .setWorkerClass(MembershipJob.class)
-        .addComputeResource(1, 2048, 10)
+        .addComputeResource(1, 48000, parallel)
         .setConfig(new JobConfig())
         .build();
     // now submit the job
@@ -59,74 +59,10 @@ public class MembershipJob implements IWorker, Serializable {
                       IVolatileVolume volatileVolume) {
     BatchTSetEnvironment batchEnv = BatchTSetEnvironment.initBatch(WorkerEnvironment.init(
         config, workerID, workerController, persistentVolume, volatileVolume));
-    int wId = workerID;
-    // first we are going to read the files and sort them
-    SinkTSet<Iterator<Tuple<BigInteger, Iterator<Long>>>> sink1 = batchEnv.createSource(new SourceFunc<Tuple<BigInteger, Long>>() {
-      TwitterInputReader reader;
 
-      @Override
-      public void prepare(TSetContext context) {
-        reader = new TwitterInputReader("/tmp/input-" + context.getIndex());
-      }
-
-      @Override
-      public boolean hasNext() {
-        try {
-          return reader.hasNext();
-        } catch (Exception e) {
-          throw new RuntimeException("Failed to read", e);
-        }
-      }
-
-      @Override
-      public Tuple<BigInteger, Long> next() {
-        try {
-          return reader.next();
-        } catch (Exception e) {
-          throw new RuntimeException("Failed to read next", e);
-        }
-      }
-    }, parallel).mapToTuple(new MapFunc<Tuple<BigInteger, Long>, Tuple<BigInteger, Long>>() {
-      @Override
-      public Tuple<BigInteger, Long> map(Tuple<BigInteger, Long> input) {
-        return input;
-      }
-    }).keyedGather().sink(new SinkFunc<Iterator<Tuple<BigInteger, Iterator<Long>>>>() {
-      TweetBufferedOutputWriter writer;
-
-      TSetContext context;
-
-      @Override
-      public void prepare(TSetContext context) {
-        try {
-          writer = new TweetBufferedOutputWriter("/tmp/outfile-" + context.getIndex());
-          this.context = context;
-        } catch (FileNotFoundException e) {
-          throw new RuntimeException("Failed to write", e);
-        }
-      }
-
-      @Override
-      public boolean add(Iterator<Tuple<BigInteger, Iterator<Long>>> value) {
-        while (value.hasNext()) {
-          try {
-            Tuple<BigInteger, Iterator<Long>> next = value.next();
-            writer.write(next.getKey(), next.getValue().next());
-          } catch (Exception e) {
-            throw new RuntimeException("Failed to write", e);
-          }
-        }
-        writer.close();
-        return true;
-      }
-    });
-
-    batchEnv.eval(sink1);
-
-    // now lets read the second input file
+    // now lets read the second input file and cache it
     Storable<Tuple<BigInteger, Long>> secondInput = batchEnv.createSource(new SourceFunc<Tuple<BigInteger, Long>>() {
       TwitterInputReader reader;
-
       @Override
       public void prepare(TSetContext context) {
         reader = new TwitterInputReader("/tmp/second-input-" + context.getIndex());
@@ -161,7 +97,8 @@ public class MembershipJob implements IWorker, Serializable {
       }
     }).cache();
 
-    SourceTSet<Tuple<BigInteger, Long>> savedInput = batchEnv.createSource(new SourceFunc<Tuple<BigInteger, Long>>() {
+    // now lets read the partitioned file and find the membership
+    SourceTSet<Tuple<BigInteger, Long>> inputRecords = batchEnv.createSource(new SourceFunc<Tuple<BigInteger, Long>>() {
       TwitterInputReader reader;
       @Override
       public void prepare(TSetContext context) {
@@ -187,8 +124,7 @@ public class MembershipJob implements IWorker, Serializable {
       }
     }, 10);
 
-
-    SinkTSet<Iterator<String>> sink = savedInput.direct().flatmap(new FlatMapFunc<String, Tuple<BigInteger, Long>>() {
+    SinkTSet<Iterator<String>> sink = inputRecords.direct().flatmap(new FlatMapFunc<String, Tuple<BigInteger, Long>>() {
       Map<String, Long> inputMap = new HashMap<>();
 
       TSetContext context;

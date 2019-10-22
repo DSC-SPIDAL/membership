@@ -7,13 +7,17 @@ import edu.iu.dsc.tws.api.comms.structs.Tuple;
 import java.io.*;
 import java.math.BigInteger;
 
+/**
+ * Writing the tweetid:time combination to a file
+ */
 public class TweetBufferedOutputWriter {
-  private String fileName;
 
+  /**
+   * Keep track of the output stream, we need to close at the end
+   */
   private FileOutputStream out;
 
   public TweetBufferedOutputWriter(String fileName) throws FileNotFoundException {
-    this.fileName = fileName;
     this.out = new FileOutputStream(fileName);
   }
 
@@ -44,27 +48,6 @@ public class TweetBufferedOutputWriter {
       out.flush();
       out.close();
     } catch (IOException ignore) {
-    }
-  }
-
-  public static void main(String[] args) throws IOException {
-    try {
-      TweetBufferedOutputWriter outputWriter = new TweetBufferedOutputWriter("/tmp/input-" + 0);
-      BigInteger start = new BigInteger("100000000000000000").multiply(new BigInteger("" + 0));
-      // now write 1000,000
-      for (int i = 0; i < 10; i++) {
-        BigInteger bi = start.add(new BigInteger(i + ""));
-        outputWriter.write(bi, 0l);
-      }
-      outputWriter.close();
-
-
-      TwitterInputReader reader = new TwitterInputReader("/tmp/input-0");
-      while (reader.hasNext()) {
-        Tuple<BigInteger, Long> t = reader.next();
-      }
-    } catch (Exception e) {
-      throw new RuntimeException(e);
     }
   }
 }
