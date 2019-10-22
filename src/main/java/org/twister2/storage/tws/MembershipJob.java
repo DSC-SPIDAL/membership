@@ -9,6 +9,7 @@ import edu.iu.dsc.tws.api.dataset.DataPartitionConsumer;
 import edu.iu.dsc.tws.api.resource.*;
 import edu.iu.dsc.tws.api.tset.RecordCollector;
 import edu.iu.dsc.tws.api.tset.Storable;
+import edu.iu.dsc.tws.api.tset.TBase;
 import edu.iu.dsc.tws.api.tset.TSetContext;
 import edu.iu.dsc.tws.api.tset.fn.FlatMapFunc;
 import edu.iu.dsc.tws.api.tset.fn.MapFunc;
@@ -18,6 +19,8 @@ import edu.iu.dsc.tws.api.tset.sets.batch.BatchTSet;
 import edu.iu.dsc.tws.rsched.core.ResourceAllocator;
 import edu.iu.dsc.tws.rsched.job.Twister2Submitter;
 import edu.iu.dsc.tws.tset.env.BatchTSetEnvironment;
+import edu.iu.dsc.tws.tset.sets.batch.SinkTSet;
+import edu.iu.dsc.tws.tset.sets.batch.SourceTSet;
 import org.twister2.storage.io.TweetBufferedOutputWriter;
 import org.twister2.storage.io.TwitterInputReader;
 
@@ -58,8 +61,9 @@ public class MembershipJob implements IWorker, Serializable {
         config, workerID, workerController, persistentVolume, volatileVolume));
     int wId = workerID;
     // first we are going to read the files and sort them
-    batchEnv.createSource(new SourceFunc<Tuple<BigInteger, Long>>() {
+    SinkTSet<Iterator<Tuple<BigInteger, Iterator<Long>>>> sink1 = batchEnv.createSource(new SourceFunc<Tuple<BigInteger, Long>>() {
       TwitterInputReader reader;
+
       @Override
       public void prepare(TSetContext context) {
         reader = new TwitterInputReader("/tmp/input-" + context.getIndex());
@@ -104,7 +108,7 @@ public class MembershipJob implements IWorker, Serializable {
 
       @Override
       public boolean add(Iterator<Tuple<BigInteger, Iterator<Long>>> value) {
-        while(value.hasNext()) {
+        while (value.hasNext()) {
           try {
             Tuple<BigInteger, Iterator<Long>> next = value.next();
             writer.write(next.getKey(), next.getValue().next());
@@ -116,6 +120,8 @@ public class MembershipJob implements IWorker, Serializable {
         return true;
       }
     });
+
+    batchEnv.eval(sink1);
 
     // now lets read the second input file
     Storable<Tuple<BigInteger, Long>> secondInput = batchEnv.createSource(new SourceFunc<Tuple<BigInteger, Long>>() {
@@ -155,7 +161,7 @@ public class MembershipJob implements IWorker, Serializable {
       }
     }).cache();
 
-    BatchTSet<Tuple<BigInteger, Long>> savedInput = batchEnv.createSource(new SourceFunc<Tuple<BigInteger, Long>>() {
+    SourceTSet<Tuple<BigInteger, Long>> savedInput = batchEnv.createSource(new SourceFunc<Tuple<BigInteger, Long>>() {
       TwitterInputReader reader;
       @Override
       public void prepare(TSetContext context) {
@@ -182,7 +188,7 @@ public class MembershipJob implements IWorker, Serializable {
     }, 4);
 
 
-    BatchTSet<String> b = savedInput.direct().flatmap(new FlatMapFunc<String, Tuple<BigInteger, Long>>() {
+    SinkTSet<Iterator<String>> sink = savedInput.direct().flatmap(new FlatMapFunc<String, Tuple<BigInteger, Long>>() {
       Map<String, Long> inputMap = new HashMap<>();
 
       TSetContext context;
@@ -208,10 +214,7 @@ public class MembershipJob implements IWorker, Serializable {
           }
         }
       }
-    });
-    b.addInput("input", secondInput);
-
-    b.direct().sink(new SinkFunc<Iterator<String>>() {
+    }).addInput("input", secondInput).direct().sink(new SinkFunc<Iterator<String>>() {
       TweetBufferedOutputWriter writer;
 
       @Override
@@ -236,5 +239,7 @@ public class MembershipJob implements IWorker, Serializable {
         return true;
       }
     });
+
+    batchEnv.eval(sink);
   }
 }

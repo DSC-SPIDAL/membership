@@ -28,7 +28,7 @@
         </dependency>
         <dependency>
             <groupId>org.twister2</groupId>
-            <artifactId>proto-java</artifactId>
+            <artifactId>jproto-java</artifactId>
             <version>0.3.0</version>
         </dependency>
         <dependency>
