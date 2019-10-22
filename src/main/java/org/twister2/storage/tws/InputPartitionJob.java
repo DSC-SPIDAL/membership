@@ -23,7 +23,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 
 public class InputPartitionJob implements IWorker, Serializable {
-  private static int parallel = 10;
+  private static int parallel = 40;
 
   public static void main(String[] args) {
     Config config = ResourceAllocator.loadConfig(new HashMap<>());
