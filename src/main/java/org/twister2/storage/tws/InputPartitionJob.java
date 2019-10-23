@@ -50,7 +50,7 @@ public class InputPartitionJob implements IWorker, Serializable {
 
       @Override
       public void prepare(TSetContext context) {
-        reader = new TwitterInputReader("/tmp/input-" + context.getIndex());
+        reader = new TwitterInputReader("/data/input-" + context.getIndex());
       }
 
       @Override
@@ -83,7 +83,7 @@ public class InputPartitionJob implements IWorker, Serializable {
       @Override
       public void prepare(TSetContext context) {
         try {
-          writer = new TweetBufferedOutputWriter("/tmp/outfile-" + context.getIndex());
+          writer = new TweetBufferedOutputWriter("/data/outfile-" + context.getIndex());
           this.context = context;
         } catch (FileNotFoundException e) {
           throw new RuntimeException("Failed to write", e);

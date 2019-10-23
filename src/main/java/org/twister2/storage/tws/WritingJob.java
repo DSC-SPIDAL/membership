@@ -21,7 +21,7 @@ public class WritingJob implements IWorker {
                       IPersistentVolume persistentVolume,
                       IVolatileVolume volatileVolume) {
     try {
-      TweetBufferedOutputWriter outputWriter = new TweetBufferedOutputWriter("/tmp/input-" + workerID);
+      TweetBufferedOutputWriter outputWriter = new TweetBufferedOutputWriter("/data/input-" + workerID);
       BigInteger start = new BigInteger("100000000000000000").multiply(new BigInteger("" + (workerID + 1)));
       // now write 1000,000
       for (int i = 0; i < 100000000; i++) {
@@ -33,7 +33,7 @@ public class WritingJob implements IWorker {
       }
       outputWriter.close();
 
-      TweetBufferedOutputWriter outputWriter2 = new TweetBufferedOutputWriter("/tmp/second-input-" + workerID);
+      TweetBufferedOutputWriter outputWriter2 = new TweetBufferedOutputWriter("/data/second-input-" + workerID);
       BigInteger start2 = new BigInteger("100000000000000000").multiply(new BigInteger("" + (workerID + 1)));
       // now write 1000,000
       for (int i = 0; i < 1000000; i++) {

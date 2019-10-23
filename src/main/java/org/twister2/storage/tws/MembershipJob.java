@@ -65,7 +65,7 @@ public class MembershipJob implements IWorker, Serializable {
       TwitterInputReader reader;
       @Override
       public void prepare(TSetContext context) {
-        reader = new TwitterInputReader("/tmp/second-input-" + context.getIndex());
+        reader = new TwitterInputReader("/data/second-input-" + context.getIndex());
       }
 
       @Override
@@ -102,7 +102,7 @@ public class MembershipJob implements IWorker, Serializable {
       TwitterInputReader reader;
       @Override
       public void prepare(TSetContext context) {
-        reader = new TwitterInputReader("/tmp/outfile-" + context.getIndex());
+        reader = new TwitterInputReader("/data/outfile-" + context.getIndex());
       }
 
       @Override
@@ -156,7 +156,7 @@ public class MembershipJob implements IWorker, Serializable {
       @Override
       public void prepare(TSetContext context) {
         try {
-          writer = new TweetBufferedOutputWriter("/tmp/final-" + context.getIndex());
+          writer = new TweetBufferedOutputWriter("/data/final-" + context.getIndex());
         } catch (FileNotFoundException e) {
           throw new RuntimeException(e);
         }
