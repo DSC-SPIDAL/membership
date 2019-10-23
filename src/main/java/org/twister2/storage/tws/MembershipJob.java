@@ -85,7 +85,7 @@ public class MembershipJob implements IWorker, Serializable {
           throw new RuntimeException();
         }
       }
-    }, 10).mapToTuple(new MapFunc<Tuple<BigInteger, Long>, Tuple<BigInteger, Long>>() {
+    }, parallel).mapToTuple(new MapFunc<Tuple<BigInteger, Long>, Tuple<BigInteger, Long>>() {
       @Override
       public Tuple<BigInteger, Long> map(Tuple<BigInteger, Long> input) {
         return input;
@@ -122,7 +122,7 @@ public class MembershipJob implements IWorker, Serializable {
           throw new RuntimeException("Failed to read", e);
         }
       }
-    }, 10);
+    }, parallel);
 
     SinkTSet<Iterator<String>> sink = inputRecords.direct().flatmap(new FlatMapFunc<String, Tuple<BigInteger, Long>>() {
       Map<String, Long> inputMap = new HashMap<>();
