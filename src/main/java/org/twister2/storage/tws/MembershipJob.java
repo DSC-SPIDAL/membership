@@ -36,7 +36,7 @@ import java.util.logging.Logger;
 public class MembershipJob implements IWorker, Serializable {
   private static final Logger LOG = Logger.getLogger(MembershipJob.class.getName());
 
-  private static int parallel = 10;
+  private static int parallel = 40;
 
   public static void main(String[] args) {
     Config config = ResourceAllocator.loadConfig(new HashMap<>());
