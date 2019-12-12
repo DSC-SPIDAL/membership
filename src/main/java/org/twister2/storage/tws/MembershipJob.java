@@ -7,16 +7,12 @@ import edu.iu.dsc.tws.api.config.Config;
 import edu.iu.dsc.tws.api.dataset.DataPartition;
 import edu.iu.dsc.tws.api.dataset.DataPartitionConsumer;
 import edu.iu.dsc.tws.api.resource.*;
-import edu.iu.dsc.tws.api.tset.RecordCollector;
-import edu.iu.dsc.tws.api.tset.Storable;
 import edu.iu.dsc.tws.api.tset.TSetContext;
-import edu.iu.dsc.tws.api.tset.fn.FlatMapFunc;
-import edu.iu.dsc.tws.api.tset.fn.MapFunc;
-import edu.iu.dsc.tws.api.tset.fn.SinkFunc;
-import edu.iu.dsc.tws.api.tset.fn.SourceFunc;
+import edu.iu.dsc.tws.api.tset.fn.*;
 import edu.iu.dsc.tws.rsched.core.ResourceAllocator;
 import edu.iu.dsc.tws.rsched.job.Twister2Submitter;
 import edu.iu.dsc.tws.tset.env.BatchTSetEnvironment;
+import edu.iu.dsc.tws.tset.sets.batch.CachedTSet;
 import edu.iu.dsc.tws.tset.sets.batch.SinkTSet;
 import edu.iu.dsc.tws.tset.sets.batch.SourceTSet;
 import org.twister2.storage.io.TweetBufferedOutputWriter;
@@ -61,8 +57,9 @@ public class MembershipJob implements IWorker, Serializable {
         config, workerID, workerController, persistentVolume, volatileVolume));
 
     // now lets read the second input file and cache it
-    Storable<Tuple<BigInteger, Long>> secondInput = batchEnv.createSource(new SourceFunc<Tuple<BigInteger, Long>>() {
+    CachedTSet<Tuple<BigInteger, Long>> secondInput = batchEnv.createSource(new SourceFunc<Tuple<BigInteger, Long>>() {
       TwitterInputReader reader;
+
       @Override
       public void prepare(TSetContext context) {
         reader = new TwitterInputReader("/tmp/second-input-" + context.getIndex());
@@ -90,10 +87,10 @@ public class MembershipJob implements IWorker, Serializable {
       public Tuple<BigInteger, Long> map(Tuple<BigInteger, Long> input) {
         return input;
       }
-    }).keyedGather().flatmap(new FlatMapFunc<Tuple<BigInteger, Long>, Tuple<BigInteger, Iterator<Long>>>() {
+    }).keyedGatherUngrouped().flatmap(new FlatMapFunc<Tuple<BigInteger, Long>, Tuple<BigInteger, Long>>() {
       @Override
-      public void flatMap(Tuple<BigInteger, Iterator<Long>> input, RecordCollector<Tuple<BigInteger, Long>> collector) {
-        collector.collect(new Tuple<>(input.getKey(), input.getValue().next()));
+      public void flatMap(Tuple<BigInteger, Long> input, RecordCollector<Tuple<BigInteger, Long>> collector) {
+        collector.collect(input);
       }
     }).cache();
 
