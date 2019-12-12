@@ -21,8 +21,11 @@ import java.io.Serializable;
 import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.logging.Logger;
 
 public class InputPartitionJob implements IWorker, Serializable {
+  private static final Logger LOG = Logger.getLogger(InputPartitionJob.class.getName());
+
   private static int parallel = 40;
 
   public static void main(String[] args) {
@@ -48,15 +51,22 @@ public class InputPartitionJob implements IWorker, Serializable {
     SinkTSet<Iterator<Tuple<BigInteger, Iterator<Long>>>> sink1 = batchEnv.createSource(new SourceFunc<Tuple<BigInteger, Long>>() {
       TwitterInputReader reader;
 
+      private TSetContext ctx;
+
       @Override
       public void prepare(TSetContext context) {
+        this.ctx = context;
         reader = new TwitterInputReader("/data/input-" + context.getIndex());
       }
 
       @Override
       public boolean hasNext() {
         try {
-          return reader.hasNext();
+          boolean b = reader.hasNext();
+          if (!b) {
+            LOG.info("Done reading from file - " + "/data/input-" + ctx.getIndex());
+          }
+          return b;
         } catch (Exception e) {
           throw new RuntimeException("Failed to read", e);
         }
@@ -92,6 +102,7 @@ public class InputPartitionJob implements IWorker, Serializable {
 
       @Override
       public boolean add(Iterator<Tuple<BigInteger, Iterator<Long>>> value) {
+        LOG.info("Starting to save");
         while (value.hasNext()) {
           try {
             Tuple<BigInteger, Iterator<Long>> next = value.next();
