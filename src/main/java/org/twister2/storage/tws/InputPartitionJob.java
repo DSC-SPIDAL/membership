@@ -85,7 +85,7 @@ public class InputPartitionJob implements IWorker, Serializable {
       public Tuple<BigInteger, Long> map(Tuple<BigInteger, Long> input) {
         return input;
       }
-    }).keyedGather().sink(new SinkFunc<Iterator<Tuple<BigInteger, Iterator<Long>>>>() {
+    }).keyedGather().useDisk().sink(new SinkFunc<Iterator<Tuple<BigInteger, Iterator<Long>>>>() {
       TweetBufferedOutputWriter writer;
 
       TSetContext context;
