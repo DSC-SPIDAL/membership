@@ -32,7 +32,7 @@ import java.util.logging.Logger;
 public class MembershipJob implements IWorker, Serializable {
   private static final Logger LOG = Logger.getLogger(MembershipJob.class.getName());
 
-  private static int parallel = 10;
+  private static int parallel = 40;
 
   public static void main(String[] args) {
     Config config = ResourceAllocator.loadConfig(new HashMap<>());
@@ -62,7 +62,7 @@ public class MembershipJob implements IWorker, Serializable {
 
       @Override
       public void prepare(TSetContext context) {
-        reader = new TwitterInputReader("/tmp/second-input-" + context.getIndex());
+        reader = new TwitterInputReader("/data/second-input-" + context.getIndex());
       }
 
       @Override
@@ -82,7 +82,7 @@ public class MembershipJob implements IWorker, Serializable {
           throw new RuntimeException();
         }
       }
-    }, 10).mapToTuple(new MapFunc<Tuple<BigInteger, Long>, Tuple<BigInteger, Long>>() {
+    }, parallel).mapToTuple(new MapFunc<Tuple<BigInteger, Long>, Tuple<BigInteger, Long>>() {
       @Override
       public Tuple<BigInteger, Long> map(Tuple<BigInteger, Long> input) {
         return input;
@@ -99,7 +99,7 @@ public class MembershipJob implements IWorker, Serializable {
       TwitterInputReader reader;
       @Override
       public void prepare(TSetContext context) {
-        reader = new TwitterInputReader("/tmp/outfile-" + context.getIndex());
+        reader = new TwitterInputReader("/data/outfile-" + context.getIndex());
       }
 
       @Override
@@ -119,7 +119,7 @@ public class MembershipJob implements IWorker, Serializable {
           throw new RuntimeException("Failed to read", e);
         }
       }
-    }, 10);
+    }, parallel);
 
     SinkTSet<Iterator<String>> sink = inputRecords.direct().flatmap(new FlatMapFunc<String, Tuple<BigInteger, Long>>() {
       Map<String, Long> inputMap = new HashMap<>();
@@ -153,7 +153,7 @@ public class MembershipJob implements IWorker, Serializable {
       @Override
       public void prepare(TSetContext context) {
         try {
-          writer = new TweetBufferedOutputWriter("/tmp/final-" + context.getIndex());
+          writer = new TweetBufferedOutputWriter("/data/final-" + context.getIndex());
         } catch (FileNotFoundException e) {
           throw new RuntimeException(e);
         }
