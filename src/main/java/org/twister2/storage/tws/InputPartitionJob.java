@@ -12,6 +12,7 @@ import edu.iu.dsc.tws.api.tset.fn.SourceFunc;
 import edu.iu.dsc.tws.rsched.core.ResourceAllocator;
 import edu.iu.dsc.tws.rsched.job.Twister2Submitter;
 import edu.iu.dsc.tws.tset.env.BatchTSetEnvironment;
+import edu.iu.dsc.tws.tset.fn.HashingPartitioner;
 import edu.iu.dsc.tws.tset.sets.batch.SinkTSet;
 import org.twister2.storage.io.TweetBufferedOutputWriter;
 import org.twister2.storage.io.TwitterInputReader;
@@ -19,14 +20,13 @@ import org.twister2.storage.io.TwitterInputReader;
 import java.io.FileNotFoundException;
 import java.io.Serializable;
 import java.math.BigInteger;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.logging.Logger;
 
 public class InputPartitionJob implements IWorker, Serializable {
   private static final Logger LOG = Logger.getLogger(InputPartitionJob.class.getName());
-
-  private static int parallel = 40;
 
   public static void main(String[] args) {
     Config config = ResourceAllocator.loadConfig(new HashMap<>());
@@ -35,7 +35,7 @@ public class InputPartitionJob implements IWorker, Serializable {
     twister2Job = Twister2Job.newBuilder()
         .setJobName(MembershipJob.class.getName())
         .setWorkerClass(InputPartitionJob.class)
-        .addComputeResource(1, 48000, parallel)
+        .addComputeResource(1, 48000, Context.PARALLELISM)
         .setConfig(new JobConfig())
         .build();
     // now submit the job
@@ -80,12 +80,17 @@ public class InputPartitionJob implements IWorker, Serializable {
           throw new RuntimeException("Failed to read next", e);
         }
       }
-    }, parallel).mapToTuple(new MapFunc<Tuple<BigInteger, Long>, Tuple<BigInteger, Long>>() {
+    }, Context.PARALLELISM).mapToTuple(new MapFunc<Tuple<BigInteger, Long>, Tuple<BigInteger, Long>>() {
       @Override
       public Tuple<BigInteger, Long> map(Tuple<BigInteger, Long> input) {
         return input;
       }
-    }).keyedGather().useDisk().sink(new SinkFunc<Iterator<Tuple<BigInteger, Iterator<Long>>>>() {
+    }).keyedGather(new HashingPartitioner<>(), new Comparator<BigInteger>() {
+      @Override
+      public int compare(BigInteger o1, BigInteger o2) {
+        return o1.compareTo(o2);
+      }
+    }).useDisk().sink(new SinkFunc<Iterator<Tuple<BigInteger, Iterator<Long>>>>() {
       TweetBufferedOutputWriter writer;
 
       TSetContext context;

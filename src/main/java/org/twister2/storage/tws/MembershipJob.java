@@ -32,8 +32,6 @@ import java.util.logging.Logger;
 public class MembershipJob implements IWorker, Serializable {
   private static final Logger LOG = Logger.getLogger(MembershipJob.class.getName());
 
-  private static int parallel = 40;
-
   public static void main(String[] args) {
     Config config = ResourceAllocator.loadConfig(new HashMap<>());
 
@@ -41,7 +39,7 @@ public class MembershipJob implements IWorker, Serializable {
     twister2Job = Twister2Job.newBuilder()
         .setJobName(MembershipJob.class.getName())
         .setWorkerClass(MembershipJob.class)
-        .addComputeResource(1, 48000, parallel)
+        .addComputeResource(1, 48000, Context.PARALLELISM)
         .setConfig(new JobConfig())
         .build();
     // now submit the job
@@ -82,7 +80,7 @@ public class MembershipJob implements IWorker, Serializable {
           throw new RuntimeException();
         }
       }
-    }, parallel).mapToTuple(new MapFunc<Tuple<BigInteger, Long>, Tuple<BigInteger, Long>>() {
+    }, Context.PARALLELISM).mapToTuple(new MapFunc<Tuple<BigInteger, Long>, Tuple<BigInteger, Long>>() {
       @Override
       public Tuple<BigInteger, Long> map(Tuple<BigInteger, Long> input) {
         return input;
@@ -119,7 +117,7 @@ public class MembershipJob implements IWorker, Serializable {
           throw new RuntimeException("Failed to read", e);
         }
       }
-    }, parallel);
+    }, Context.PARALLELISM);
 
     SinkTSet<Iterator<String>> sink = inputRecords.direct().flatmap(new FlatMapFunc<String, Tuple<BigInteger, Long>>() {
       Map<String, Long> inputMap = new HashMap<>();
