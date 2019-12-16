@@ -98,7 +98,7 @@ public class InputPartitionJob implements IWorker, Serializable {
       @Override
       public void prepare(TSetContext context) {
         try {
-          writer = new TweetBufferedOutputWriter(Context.FILE_BASE + "/data/outfile-" + context.getIndex());
+          writer = new TweetBufferedOutputWriter(Context.FILE_BASE + "/data/outfile-" + context.getIndex(), config);
           this.context = context;
         } catch (FileNotFoundException e) {
           throw new RuntimeException("Failed to write", e);

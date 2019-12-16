@@ -151,7 +151,7 @@ public class MembershipJob implements IWorker, Serializable {
       @Override
       public void prepare(TSetContext context) {
         try {
-          writer = new TweetBufferedOutputWriter(Context.FILE_BASE + "/data/final-" + context.getIndex());
+          writer = new TweetBufferedOutputWriter(Context.FILE_BASE + "/data/final-" + context.getIndex(), config);
         } catch (FileNotFoundException e) {
           throw new RuntimeException(e);
         }
