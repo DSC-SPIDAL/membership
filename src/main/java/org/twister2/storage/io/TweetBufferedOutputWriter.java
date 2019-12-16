@@ -2,23 +2,35 @@ package org.twister2.storage.io;
 
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import edu.iu.dsc.tws.api.comms.structs.Tuple;
+import edu.iu.dsc.tws.api.config.Config;
+import edu.iu.dsc.tws.api.data.FSDataOutputStream;
+import edu.iu.dsc.tws.api.data.FileSystem;
+import edu.iu.dsc.tws.api.data.Path;
+import edu.iu.dsc.tws.data.utils.FileSystemUtils;
 
 import java.io.*;
 import java.math.BigInteger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Writing the tweetid:time combination to a file
  */
 public class TweetBufferedOutputWriter {
+  private static final Logger LOG = Logger.getLogger(TweetBufferedOutputWriter.class.getName());
 
   /**
    * Keep track of the output stream, we need to close at the end
    */
-  private FileOutputStream out;
+  private FSDataOutputStream out;
 
-  public TweetBufferedOutputWriter(String fileName) throws FileNotFoundException {
-    this.out = new FileOutputStream(fileName);
+  public TweetBufferedOutputWriter(String fileName, Config config) throws FileNotFoundException {
+    try {
+      FileSystem fs = FileSystemUtils.get(new Path(fileName).toUri(), config);
+      this.out = fs.create(new Path(fileName));
+    } catch (IOException e) {
+      LOG.log(Level.SEVERE, "Failed to create file system - " + fileName);
+    }
   }
 
   public void write(BigInteger b, Long l) throws Exception {
