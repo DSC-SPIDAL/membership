@@ -39,7 +39,7 @@ public class MembershipJob implements IWorker, Serializable {
     twister2Job = Twister2Job.newBuilder()
         .setJobName(MembershipJob.class.getName())
         .setWorkerClass(MembershipJob.class)
-        .addComputeResource(1, 48000, Context.PARALLELISM)
+        .addComputeResource(1, Context.MEMORY, Context.PARALLELISM)
         .setConfig(new JobConfig())
         .build();
     // now submit the job

@@ -8,6 +8,7 @@ import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.io.InputSplit;
 import org.apache.flink.core.io.InputSplitAssigner;
+import org.twister2.storage.tws.Context;
 
 import java.io.DataInputStream;
 import java.io.EOFException;
@@ -32,7 +33,7 @@ public class BinaryInput implements InputFormat<Tuple2<BigInteger, Long>, Binary
 
   @Override
   public void configure(Configuration configuration) {
-    filePrefix = configuration.getString("fs.file.prefix", "/data/input-");
+    filePrefix = configuration.getString("fs.file.prefix", Context.FILE_BASE + "/data/input-");
   }
 
   @Override
