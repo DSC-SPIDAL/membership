@@ -65,6 +65,18 @@
             <groupId>org.twister2</groupId>
             <artifactId>tset-java</artifactId>
             <version>0.5.0-SNAPSHOT</version>
-    </dependency>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-java</artifactId>
+            <version>1.9.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-streaming-java_2.11</artifactId>
+            <version>1.9.0</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 </project>
