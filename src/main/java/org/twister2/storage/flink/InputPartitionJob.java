@@ -17,7 +17,7 @@ public class InputPartitionJob {
     ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 
     DataSource<Tuple2<BigInteger, Long>> s = env.createInput(new BinaryInput()).setParallelism(4);
-    s.partitionByHash(0).sortPartition(0, Order.ASCENDING).writeAsCsv(Context.FILE_BASE + "/data");
+    s.partitionByHash(0).sortPartition(0, Order.ASCENDING).writeAsCsv(Context.FILE_BASE + "/out");
 
     try {
       env.execute();
