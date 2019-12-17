@@ -27,7 +27,7 @@ public class BinaryInput implements InputFormat<Tuple2<BigInteger, Long>, Binary
 
   private DataInputStream stream;
 
-  private boolean end = true;
+  private boolean end = false;
 
   private int count = 0;
 
@@ -55,7 +55,12 @@ public class BinaryInput implements InputFormat<Tuple2<BigInteger, Long>, Binary
     return new InputSplitAssigner() {
       @Override
       public InputSplit getNextInputSplit(String s, int i) {
-        return new BinarySplit(i);
+        for (BinarySplit split : binarySplits) {
+          if (split.getSplitNumber() == i) {
+            return split;
+          }
+        }
+        return null;
       }
 
       @Override
@@ -94,9 +99,9 @@ public class BinaryInput implements InputFormat<Tuple2<BigInteger, Long>, Binary
   public Tuple2<BigInteger, Long> nextRecord(Tuple2<BigInteger, Long> o) throws IOException {
     try {
       byte[] intBuffer = new byte[currentSize];
-      int read = stream.read(intBuffer);
-      if (read != currentSize) {
-        throw new RuntimeException("Invalid file");
+      int read = read(intBuffer, 0, currentSize);
+      while (read != currentSize) {
+        throw new RuntimeException("Invalid file: read" + count);
       }
 
       BigInteger tweetId = new BigInteger(intBuffer);
@@ -108,6 +113,20 @@ public class BinaryInput implements InputFormat<Tuple2<BigInteger, Long>, Binary
       LOG.log(Level.SEVERE, "End reached - read tuples - " + count, e);
       throw new RuntimeException("We cannot reach end here", e);
     }
+  }
+
+  private int read(byte[] b, int off, int len) throws IOException {
+    int totalRead = 0;
+    for (int remainingLength = len, offset = off; remainingLength > 0;) {
+      int read = this.stream.read(b, offset, remainingLength);
+      if (read < 0) {
+        return read;
+      }
+      totalRead += read;
+      offset += read;
+      remainingLength -= read;
+    }
+    return totalRead;
   }
 
   @Override

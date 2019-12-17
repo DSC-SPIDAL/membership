@@ -4,6 +4,7 @@ import org.apache.flink.api.common.operators.Order;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.operators.DataSource;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.core.fs.FileSystem;
 import org.twister2.storage.tws.Context;
 
 import java.math.BigInteger;
@@ -17,7 +18,8 @@ public class InputPartitionJob {
     ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 
     DataSource<Tuple2<BigInteger, Long>> s = env.createInput(new BinaryInput()).setParallelism(4);
-    s.partitionByHash(0).sortPartition(0, Order.ASCENDING).writeAsCsv(Context.FILE_BASE + "/out");
+    s.partitionByHash(0).sortPartition(0, Order.ASCENDING).writeAsCsv(Context.FILE_BASE + "/out",
+        FileSystem.WriteMode.OVERWRITE);
 
     try {
       env.execute();
