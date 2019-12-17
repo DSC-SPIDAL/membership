@@ -1,7 +1,7 @@
 package org.twister2.storage.tws;
 
 public final class Context {
-  public static final String FILE_BASE = "";
+  public static final String FILE_BASE = "hdfs://localhost:9001";
 
   public static final int PARALLELISM = 4;
 
