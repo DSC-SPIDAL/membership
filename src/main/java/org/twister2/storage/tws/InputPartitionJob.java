@@ -6,7 +6,6 @@ import edu.iu.dsc.tws.api.comms.structs.Tuple;
 import edu.iu.dsc.tws.api.config.Config;
 import edu.iu.dsc.tws.api.resource.*;
 import edu.iu.dsc.tws.api.tset.TSetContext;
-import edu.iu.dsc.tws.api.tset.fn.MapFunc;
 import edu.iu.dsc.tws.api.tset.fn.SinkFunc;
 import edu.iu.dsc.tws.api.tset.fn.SourceFunc;
 import edu.iu.dsc.tws.rsched.core.ResourceAllocator;
@@ -48,7 +47,7 @@ public class InputPartitionJob implements IWorker, Serializable {
     BatchTSetEnvironment batchEnv = BatchTSetEnvironment.initBatch(WorkerEnvironment.init(
         config, workerID, workerController, persistentVolume, volatileVolume));
     // first we are going to read the files and sort them
-    SinkTSet<Iterator<Tuple<BigInteger, Iterator<Long>>>> sink1 = batchEnv.createSource(new SourceFunc<Tuple<BigInteger, Long>>() {
+    SinkTSet<Iterator<Tuple<BigInteger, Iterator<Long>>>> sink1 = batchEnv.createKeyedSource(new SourceFunc<Tuple<BigInteger, Long>>() {
       TwitterInputReader reader;
 
       private TSetContext ctx;
@@ -80,12 +79,7 @@ public class InputPartitionJob implements IWorker, Serializable {
           throw new RuntimeException("Failed to read next", e);
         }
       }
-    }, Context.PARALLELISM).mapToTuple(new MapFunc<Tuple<BigInteger, Long>, Tuple<BigInteger, Long>>() {
-      @Override
-      public Tuple<BigInteger, Long> map(Tuple<BigInteger, Long> input) {
-        return input;
-      }
-    }).keyedGather(new HashingPartitioner<>(), new Comparator<BigInteger>() {
+    }, Context.PARALLELISM).keyedGather(new HashingPartitioner<>(), new Comparator<BigInteger>() {
       @Override
       public int compare(BigInteger o1, BigInteger o2) {
         return o1.compareTo(o2);
@@ -98,7 +92,7 @@ public class InputPartitionJob implements IWorker, Serializable {
       @Override
       public void prepare(TSetContext context) {
         try {
-          writer = new TweetBufferedOutputWriter(Context.FILE_BASE + "/data/outfile-" + context.getIndex(), config);
+          writer = new TweetBufferedOutputWriter(Context.FILE_BASE + "/data/outfile-" + context.getIndex(), context.getConfig());
           this.context = context;
         } catch (FileNotFoundException e) {
           throw new RuntimeException("Failed to write", e);
