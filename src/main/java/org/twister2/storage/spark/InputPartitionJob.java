@@ -6,7 +6,6 @@ import org.apache.spark.HashPartitioner;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.twister2.storage.tws.Context;
 
 import java.math.BigInteger;
 import java.util.Comparator;
@@ -17,7 +16,7 @@ public class InputPartitionJob {
     Configuration configuration = new Configuration();
     JavaSparkContext sc = new JavaSparkContext(conf);
     JavaPairRDD<BigInteger, Long> input = sc.newAPIHadoopRDD(configuration, BinaryInput.class, BigInteger.class, Long.class);
-    JavaPairRDD<BigInteger, Long> sorted = input.repartitionAndSortWithinPartitions(new HashPartitioner(Context.PARALLELISM), new Comparator<BigInteger>() {
+    JavaPairRDD<BigInteger, Long> sorted = input.repartitionAndSortWithinPartitions(new HashPartitioner(4), new Comparator<BigInteger>() {
       @Override
       public int compare(BigInteger o1, BigInteger o2) {
         return o1.compareTo(o2);

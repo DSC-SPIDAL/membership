@@ -34,12 +34,20 @@ public class MembershipJob implements IWorker, Serializable {
 
   public static void main(String[] args) {
     Config config = ResourceAllocator.loadConfig(new HashMap<>());
+    JobConfig jobConfig = new JobConfig();
+
+    String filePrefix = args[0];
+    int parallel = Integer.parseInt(args[1]);
+    int memory = Integer.parseInt(args[2]);
+
+    jobConfig.put(Context.ARG_FILE_PREFIX, filePrefix);
+    jobConfig.put(Context.ARG_PARALLEL, parallel);
 
     Twister2Job twister2Job;
     twister2Job = Twister2Job.newBuilder()
         .setJobName(MembershipJob.class.getName())
         .setWorkerClass(MembershipJob.class)
-        .addComputeResource(1, Context.MEMORY, Context.PARALLELISM)
+        .addComputeResource(1, memory, parallel)
         .setConfig(new JobConfig())
         .build();
     // now submit the job
@@ -54,13 +62,15 @@ public class MembershipJob implements IWorker, Serializable {
     BatchTSetEnvironment batchEnv = BatchTSetEnvironment.initBatch(WorkerEnvironment.init(
         config, workerID, workerController, persistentVolume, volatileVolume));
 
+    int parallel = config.getIntegerValue(Context.ARG_PARALLEL);
     // now lets read the second input file and cache it
     CachedTSet<Tuple<BigInteger, Long>> secondInput = batchEnv.createSource(new SourceFunc<Tuple<BigInteger, Long>>() {
       TwitterInputReader reader;
 
       @Override
       public void prepare(TSetContext context) {
-        reader = new TwitterInputReader(Context.FILE_BASE + "/data/second-input-" + context.getIndex());
+        String prefix = context.getConfig().getStringValue(Context.ARG_FILE_PREFIX);
+        reader = new TwitterInputReader(prefix + "/data/second-input-" + context.getIndex());
       }
 
       @Override
@@ -80,7 +90,7 @@ public class MembershipJob implements IWorker, Serializable {
           throw new RuntimeException();
         }
       }
-    }, Context.PARALLELISM).mapToTuple(new MapFunc<Tuple<BigInteger, Long>, Tuple<BigInteger, Long>>() {
+    }, parallel).mapToTuple(new MapFunc<Tuple<BigInteger, Long>, Tuple<BigInteger, Long>>() {
       @Override
       public Tuple<BigInteger, Long> map(Tuple<BigInteger, Long> input) {
         return input;
@@ -97,7 +107,8 @@ public class MembershipJob implements IWorker, Serializable {
       TwitterInputReader reader;
       @Override
       public void prepare(TSetContext context) {
-        reader = new TwitterInputReader(Context.FILE_BASE + "/data/outfile-" + context.getIndex());
+        String prefix = context.getConfig().getStringValue(Context.ARG_FILE_PREFIX);
+        reader = new TwitterInputReader(prefix + "/data/outfile-" + context.getIndex());
       }
 
       @Override
@@ -117,7 +128,7 @@ public class MembershipJob implements IWorker, Serializable {
           throw new RuntimeException("Failed to read", e);
         }
       }
-    }, Context.PARALLELISM);
+    }, parallel);
 
     SinkTSet<Iterator<String>> sink = inputRecords.direct().flatmap(new FlatMapFunc<String, Tuple<BigInteger, Long>>() {
       Map<String, Long> inputMap = new HashMap<>();
@@ -151,7 +162,8 @@ public class MembershipJob implements IWorker, Serializable {
       @Override
       public void prepare(TSetContext context) {
         try {
-          writer = new TweetBufferedOutputWriter(Context.FILE_BASE + "/data/final-" + context.getIndex(), config);
+          String prefix = context.getConfig().getStringValue(Context.ARG_FILE_PREFIX);
+          writer = new TweetBufferedOutputWriter(prefix + "/data/final-" + context.getIndex(), config);
         } catch (FileNotFoundException e) {
           throw new RuntimeException(e);
         }

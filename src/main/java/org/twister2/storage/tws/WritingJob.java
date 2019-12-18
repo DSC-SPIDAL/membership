@@ -20,11 +20,13 @@ public class WritingJob implements IWorker {
                       IWorkerController workerController,
                       IPersistentVolume persistentVolume,
                       IVolatileVolume volatileVolume) {
+    String prefix = config.getStringValue(Context.ARG_FILE_PREFIX);
+
     try {
-      TweetBufferedOutputWriter outputWriter = new TweetBufferedOutputWriter(Context.FILE_BASE + "/data/input-" + workerID, config);
+      TweetBufferedOutputWriter outputWriter = new TweetBufferedOutputWriter(prefix + "/data/input-" + workerID, config);
       BigInteger start = new BigInteger("100000000000000000").multiply(new BigInteger("" + (workerID + 1)));
       // now write 1000,000
-      for (int i = 0; i < 100000000; i++) {
+      for (int i = 0; i < 10000000; i++) {
         BigInteger bi = start.add(new BigInteger(i + ""));
         if (i % 1000000 == 0) {
           LOG.info("Wrote elements: " + i);
@@ -33,7 +35,7 @@ public class WritingJob implements IWorker {
       }
       outputWriter.close();
 
-      TweetBufferedOutputWriter outputWriter2 = new TweetBufferedOutputWriter(Context.FILE_BASE + "/data/second-input-" + workerID, config);
+      TweetBufferedOutputWriter outputWriter2 = new TweetBufferedOutputWriter(prefix + "/data/second-input-" + workerID, config);
       BigInteger start2 = new BigInteger("100000000000000000").multiply(new BigInteger("" + (workerID + 1)));
       // now write 1000,000
       for (int i = 0; i < 1000000; i++) {
@@ -48,13 +50,19 @@ public class WritingJob implements IWorker {
 
   public static void main(String[] args) {
     Config config = ResourceAllocator.loadConfig(new HashMap<>());
+    String filePrefix = args[0];
+    int parallel = Integer.parseInt(args[1]);
+    int memory = Integer.parseInt(args[2]);
+    JobConfig jobConfig = new JobConfig();
+
+    jobConfig.put(Context.ARG_FILE_PREFIX, filePrefix);
 
     Twister2Job twister2Job;
     twister2Job = Twister2Job.newBuilder()
         .setJobName(WritingJob.class.getName())
         .setWorkerClass(WritingJob.class)
-        .addComputeResource(1, Context.MEMORY, Context.PARALLELISM)
-        .setConfig(new JobConfig())
+        .addComputeResource(1, memory, parallel)
+        .setConfig(jobConfig)
         .build();
     // now submit the job
     Twister2Submitter.submitJob(twister2Job, config);

@@ -3,6 +3,7 @@ package org.twister2.storage.flink;
 import org.apache.flink.api.common.io.InputFormat;
 import org.apache.flink.api.common.io.statistics.BaseStatistics;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
@@ -33,7 +34,9 @@ public class BinaryInput implements InputFormat<Tuple2<BigInteger, Long>, Binary
 
   @Override
   public void configure(Configuration configuration) {
-    filePrefix = configuration.getString("fs.file.prefix", Context.FILE_BASE + "/data/input-");
+    String prefix = configuration.getString(Context.ARG_FILE_PREFIX, "");
+
+    filePrefix = configuration.getString("fs.file.prefix", prefix + "/data/input-");
   }
 
   @Override
@@ -100,7 +103,7 @@ public class BinaryInput implements InputFormat<Tuple2<BigInteger, Long>, Binary
     try {
       byte[] intBuffer = new byte[currentSize];
       int read = read(intBuffer, 0, currentSize);
-      while (read != currentSize) {
+      if (read != currentSize) {
         throw new RuntimeException("Invalid file: read" + count);
       }
 

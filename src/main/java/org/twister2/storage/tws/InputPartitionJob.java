@@ -6,6 +6,7 @@ import edu.iu.dsc.tws.api.comms.structs.Tuple;
 import edu.iu.dsc.tws.api.config.Config;
 import edu.iu.dsc.tws.api.resource.*;
 import edu.iu.dsc.tws.api.tset.TSetContext;
+import edu.iu.dsc.tws.api.tset.fn.MapFunc;
 import edu.iu.dsc.tws.api.tset.fn.SinkFunc;
 import edu.iu.dsc.tws.api.tset.fn.SourceFunc;
 import edu.iu.dsc.tws.rsched.core.ResourceAllocator;
@@ -13,8 +14,8 @@ import edu.iu.dsc.tws.rsched.job.Twister2Submitter;
 import edu.iu.dsc.tws.tset.env.BatchTSetEnvironment;
 import edu.iu.dsc.tws.tset.fn.HashingPartitioner;
 import edu.iu.dsc.tws.tset.sets.batch.SinkTSet;
+import org.twister2.storage.io.StreamInputReader;
 import org.twister2.storage.io.TweetBufferedOutputWriter;
-import org.twister2.storage.io.TwitterInputReader;
 
 import java.io.FileNotFoundException;
 import java.io.Serializable;
@@ -29,13 +30,22 @@ public class InputPartitionJob implements IWorker, Serializable {
 
   public static void main(String[] args) {
     Config config = ResourceAllocator.loadConfig(new HashMap<>());
+    JobConfig jobConfig = new JobConfig();
+
+    String filePrefix = args[0];
+    int parallel = Integer.parseInt(args[1]);
+    int memory = Integer.parseInt(args[2]);
+
+    jobConfig.put(Context.ARG_FILE_PREFIX, filePrefix);
+    jobConfig.put(Context.ARG_PARALLEL, parallel);
+    jobConfig.put(Context.ARG_MEMORY, memory);
 
     Twister2Job twister2Job;
     twister2Job = Twister2Job.newBuilder()
         .setJobName(MembershipJob.class.getName())
         .setWorkerClass(InputPartitionJob.class)
-        .addComputeResource(1, Context.MEMORY, Context.PARALLELISM)
-        .setConfig(new JobConfig())
+        .addComputeResource(1, memory, parallel)
+        .setConfig(jobConfig)
         .build();
     // now submit the job
     Twister2Submitter.submitJob(twister2Job, config);
@@ -46,26 +56,30 @@ public class InputPartitionJob implements IWorker, Serializable {
                       IPersistentVolume persistentVolume, IVolatileVolume volatileVolume) {
     BatchTSetEnvironment batchEnv = BatchTSetEnvironment.initBatch(WorkerEnvironment.init(
         config, workerID, workerController, persistentVolume, volatileVolume));
+    int parallel = config.getIntegerValue(Context.ARG_PARALLEL);
     // first we are going to read the files and sort them
     SinkTSet<Iterator<Tuple<BigInteger, Iterator<Long>>>> sink1 = batchEnv.createKeyedSource(new SourceFunc<Tuple<BigInteger, Long>>() {
-      TwitterInputReader reader;
+      StreamInputReader reader;
 
       private TSetContext ctx;
+
+      private String prefix;
 
       @Override
       public void prepare(TSetContext context) {
         this.ctx = context;
-        reader = new TwitterInputReader(Context.FILE_BASE + "/data/input-" + context.getIndex());
+        prefix = context.getConfig().getStringValue(Context.ARG_FILE_PREFIX);
+        reader = new StreamInputReader(prefix + "/data/input-" + context.getIndex(), context.getConfig());
       }
 
       @Override
       public boolean hasNext() {
         try {
-          boolean b = reader.hasNext();
-          if (!b) {
-            LOG.info("Done reading from file - " + Context.FILE_BASE + "/data/input-" + ctx.getIndex());
+          boolean b = reader.reachedEnd();
+          if (b) {
+            LOG.info("Done reading from file - " + prefix + "/data/input-" + ctx.getIndex());
           }
-          return b;
+          return !b;
         } catch (Exception e) {
           throw new RuntimeException("Failed to read", e);
         }
@@ -74,12 +88,12 @@ public class InputPartitionJob implements IWorker, Serializable {
       @Override
       public Tuple<BigInteger, Long> next() {
         try {
-          return reader.next();
+          return reader.nextRecord();
         } catch (Exception e) {
           throw new RuntimeException("Failed to read next", e);
         }
       }
-    }, Context.PARALLELISM).keyedGather(new HashingPartitioner<>(), new Comparator<BigInteger>() {
+    }, parallel).keyedGather(new HashingPartitioner<>(), new Comparator<BigInteger>() {
       @Override
       public int compare(BigInteger o1, BigInteger o2) {
         return o1.compareTo(o2);
@@ -92,7 +106,8 @@ public class InputPartitionJob implements IWorker, Serializable {
       @Override
       public void prepare(TSetContext context) {
         try {
-          writer = new TweetBufferedOutputWriter(Context.FILE_BASE + "/data/outfile-" + context.getIndex(), context.getConfig());
+          String prefix = context.getConfig().getStringValue(Context.ARG_FILE_PREFIX);
+          writer = new TweetBufferedOutputWriter(prefix + "/data/outfile-" + context.getIndex(), context.getConfig());
           this.context = context;
         } catch (FileNotFoundException e) {
           throw new RuntimeException("Failed to write", e);
