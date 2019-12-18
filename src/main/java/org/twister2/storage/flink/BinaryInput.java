@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -56,24 +57,36 @@ public class BinaryInput implements InputFormat<Tuple2<BigInteger, Long>, Binary
     return split;
   }
 
-  @Override
-  public InputSplitAssigner getInputSplitAssigner(BinarySplit[] binarySplits) {
-    return new InputSplitAssigner() {
-      @Override
-      public InputSplit getNextInputSplit(String s, int i) {
-        for (BinarySplit split : binarySplits) {
-          if (split.getSplitNumber() == i) {
-            return split;
-          }
-        }
-        return null;
+  public class FixedInputAssigner implements InputSplitAssigner {
+    private BinarySplit[] splits;
+
+    private HashMap<Integer, BinarySplit> consumed = new HashMap<>();
+
+    public FixedInputAssigner(BinarySplit[] splits) {
+      for (BinarySplit split : splits) {
+        consumed.put(split.getSplitNumber(), split);
       }
 
-      @Override
-      public void returnInputSplit(List<InputSplit> list, int i) {
-        throw new RuntimeException("Failed to return");
+    }
+
+    @Override
+    public InputSplit getNextInputSplit(String s, int i) {
+      if (consumed.containsKey(i)) {
+        return consumed.remove(i);
       }
-    };
+      return null;
+    }
+
+    @Override
+    public void returnInputSplit(List<InputSplit> list, int i) {
+      throw new RuntimeException("Failed to return");
+    }
+  }
+
+
+  @Override
+  public InputSplitAssigner getInputSplitAssigner(BinarySplit[] binarySplits) {
+    return new FixedInputAssigner(binarySplits);
   }
 
   @Override
@@ -82,6 +95,7 @@ public class BinaryInput implements InputFormat<Tuple2<BigInteger, Long>, Binary
       String file = filePrefix + binarySplit.getSplitNumber();
       FileSystem fs = FileSystem.get(new URI(file));
       stream = new DataInputStream(fs.open(new Path(file)));
+      end = false;
     } catch (URISyntaxException e) {
       e.printStackTrace();
     }
@@ -97,6 +111,7 @@ public class BinaryInput implements InputFormat<Tuple2<BigInteger, Long>, Binary
       end = true;
       LOG.info("End reached - read tuples - " + count);
     }
+    LOG.info("Return - " + end);
     return end;
   }
 
