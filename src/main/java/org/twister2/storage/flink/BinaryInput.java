@@ -3,13 +3,11 @@ package org.twister2.storage.flink;
 import org.apache.flink.api.common.io.InputFormat;
 import org.apache.flink.api.common.io.statistics.BaseStatistics;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.io.InputSplit;
 import org.apache.flink.core.io.InputSplitAssigner;
-import org.twister2.storage.tws.Context;
 
 import java.io.DataInputStream;
 import java.io.EOFException;
@@ -32,11 +30,16 @@ public class BinaryInput implements InputFormat<Tuple2<BigInteger, Long>, Binary
 
   private int count = 0;
 
+  public BinaryInput(String filePrefix) {
+    this.filePrefix = filePrefix + "/data/input-";
+  }
+
   @Override
   public void configure(Configuration configuration) {
-    String prefix = configuration.getString(Context.ARG_FILE_PREFIX, "");
-
-    filePrefix = configuration.getString("fs.file.prefix", prefix + "/data/input-");
+    if (filePrefix == null) {
+      LOG.log(Level.SEVERE, "Prefix is NULL");
+      throw new RuntimeException("Prefix is NULL");
+    }
   }
 
   @Override

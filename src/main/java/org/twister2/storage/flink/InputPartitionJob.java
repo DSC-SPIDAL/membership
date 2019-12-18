@@ -1,7 +1,10 @@
 package org.twister2.storage.flink;
 
 import org.apache.flink.api.common.operators.Order;
+import org.apache.flink.api.common.typeinfo.TypeHint;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.ExecutionEnvironment;
+import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.operators.DataSource;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.utils.ParameterTool;
@@ -21,8 +24,19 @@ public class InputPartitionJob {
     ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
     env.getConfig().setGlobalJobParameters(params);
 
-    DataSource<Tuple2<BigInteger, Long>> s = env.createInput(new BinaryInput()).setParallelism(params.getInt(Context.ARG_PARALLEL));
-    s.partitionByHash(0).sortPartition(0, Order.ASCENDING).writeAsCsv(params.get(Context.ARG_FILE_PREFIX) + "/out",
+    System.out.println("PREFIX: " + params.get(Context.ARG_FILE_PREFIX));
+
+    TypeInformation<Tuple2<BigInteger, Long>> type = TypeInformation.of(new TypeHint<Tuple2<BigInteger, Long>>(){});
+
+
+    BinaryInput inputFormat = new BinaryInput(params.get(Context.ARG_FILE_PREFIX));
+    DataSource<Tuple2<BigInteger, Long>> s = env.createInput(inputFormat, type).setParallelism(params.getInt(Context.ARG_PARALLEL));
+    s.partitionByHash(0).sortPartition(new KeySelector<Tuple2<BigInteger, Long>, Long>() {
+      @Override
+      public Long getKey(Tuple2<BigInteger, Long> bigIntegerLongTuple2) throws Exception {
+        return bigIntegerLongTuple2.f1;
+      }
+    }, Order.ASCENDING).writeAsCsv(params.get(Context.ARG_FILE_PREFIX) + "/out",
         FileSystem.WriteMode.OVERWRITE);
 
     try {
