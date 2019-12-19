@@ -31,12 +31,7 @@ public class InputPartitionJob {
 
     BinaryInput inputFormat = new BinaryInput(params.get(Context.ARG_FILE_PREFIX));
     DataSource<Tuple2<BigInteger, Long>> s = env.createInput(inputFormat, type).setParallelism(params.getInt(Context.ARG_PARALLEL));
-    s.partitionByHash(0).sortPartition(new KeySelector<Tuple2<BigInteger, Long>, Long>() {
-      @Override
-      public Long getKey(Tuple2<BigInteger, Long> bigIntegerLongTuple2) throws Exception {
-        return bigIntegerLongTuple2.f1;
-      }
-    }, Order.ASCENDING).writeAsCsv(params.get(Context.ARG_FILE_PREFIX) + "/out",
+    s.partitionByHash(0).sortPartition(0, Order.ASCENDING).writeAsCsv(params.get(Context.ARG_FILE_PREFIX) + "/out",
         FileSystem.WriteMode.OVERWRITE);
 
     try {
