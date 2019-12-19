@@ -94,7 +94,7 @@ public class BinaryInput implements InputFormat<Tuple2<BigInteger, Long>, Binary
     try {
       String file = filePrefix + binarySplit.getSplitNumber();
       FileSystem fs = FileSystem.get(new URI(file));
-      stream = new DataInputStream(fs.open(new Path(file)));
+      stream = new DataInputStream(fs.open(new Path(file), 4000000));
       end = false;
     } catch (URISyntaxException e) {
       e.printStackTrace();
