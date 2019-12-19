@@ -21,9 +21,10 @@ public class WritingJob implements IWorker {
                       IPersistentVolume persistentVolume,
                       IVolatileVolume volatileVolume) {
     String prefix = config.getStringValue(Context.ARG_FILE_PREFIX);
-
+    boolean csv = config.getBooleanValue(Context.ARG_CSV);
     try {
-      TweetBufferedOutputWriter outputWriter = new TweetBufferedOutputWriter(prefix + "/data/input-" + workerID, config);
+      String data = csv ? "csv" : "";
+      TweetBufferedOutputWriter outputWriter = new TweetBufferedOutputWriter(prefix + "/" + data + "Data/input-" + workerID, config);
       BigInteger start = new BigInteger("100000000000000000").multiply(new BigInteger("" + (workerID + 1)));
       // now write 1000,000
       for (int i = 0; i < 10000000; i++) {
@@ -31,16 +32,24 @@ public class WritingJob implements IWorker {
         if (i % 1000000 == 0) {
           LOG.info("Wrote elements: " + i);
         }
-        outputWriter.write(bi, (long) workerID);
+        if (csv) {
+          outputWriter.write(bi.toString() + "," + workerID);
+        } else {
+          outputWriter.write(bi, (long) workerID);
+        }
       }
       outputWriter.close();
 
-      TweetBufferedOutputWriter outputWriter2 = new TweetBufferedOutputWriter(prefix + "/data/second-input-" + workerID, config);
+      TweetBufferedOutputWriter outputWriter2 = new TweetBufferedOutputWriter(prefix + "/" + data + "Data2/second-input-" + workerID, config);
       BigInteger start2 = new BigInteger("100000000000000000").multiply(new BigInteger("" + (workerID + 1)));
       // now write 1000,000
       for (int i = 0; i < 1000000; i++) {
         BigInteger bi = start2.add(new BigInteger(i + ""));
-        outputWriter2.write(bi, (long) workerID);
+        if (csv) {
+          outputWriter2.write(bi.toString() + "," + workerID);
+        } else {
+          outputWriter2.write(bi, (long) workerID);
+        }
       }
       outputWriter2.close();
     } catch (Exception e) {
@@ -53,9 +62,11 @@ public class WritingJob implements IWorker {
     String filePrefix = args[0];
     int parallel = Integer.parseInt(args[1]);
     int memory = Integer.parseInt(args[2]);
+    boolean csv = Boolean.parseBoolean(args[3]);
     JobConfig jobConfig = new JobConfig();
 
     jobConfig.put(Context.ARG_FILE_PREFIX, filePrefix);
+    jobConfig.put(Context.ARG_CSV, csv);
 
     Twister2Job twister2Job;
     twister2Job = Twister2Job.newBuilder()

@@ -13,7 +13,7 @@ import java.math.BigInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class StreamInputReader {
+public class StreamInputReader implements FileReader {
   private static final Logger LOG = Logger.getLogger(StreamInputReader.class.getName());
 
   private DataInputStream in;
@@ -43,7 +43,7 @@ public class StreamInputReader {
     return end;
   }
 
-  public Tuple<BigInteger, Long> nextRecord() throws IOException {
+  public Tuple<BigInteger, Long> nextRecord() {
     try {
       byte[] intBuffer = new byte[currentSize];
       int read = read(intBuffer, 0, currentSize);
@@ -59,6 +59,9 @@ public class StreamInputReader {
       end = true;
       LOG.log(Level.SEVERE, "End reached - read tuples - " + count, e);
       throw new RuntimeException("We cannot reach end here", e);
+    } catch (IOException e) {
+      e.printStackTrace();
+      throw new RuntimeException("Error", e);
     }
   }
 

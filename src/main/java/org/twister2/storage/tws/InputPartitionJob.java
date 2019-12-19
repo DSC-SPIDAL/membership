@@ -14,6 +14,8 @@ import edu.iu.dsc.tws.rsched.job.Twister2Submitter;
 import edu.iu.dsc.tws.tset.env.BatchTSetEnvironment;
 import edu.iu.dsc.tws.tset.fn.HashingPartitioner;
 import edu.iu.dsc.tws.tset.sets.batch.SinkTSet;
+import org.twister2.storage.io.CSVStreamInputReader;
+import org.twister2.storage.io.FileReader;
 import org.twister2.storage.io.StreamInputReader;
 import org.twister2.storage.io.TweetBufferedOutputWriter;
 
@@ -59,7 +61,7 @@ public class InputPartitionJob implements IWorker, Serializable {
     int parallel = config.getIntegerValue(Context.ARG_PARALLEL);
     // first we are going to read the files and sort them
     SinkTSet<Iterator<Tuple<BigInteger, Iterator<Long>>>> sink1 = batchEnv.createKeyedSource(new SourceFunc<Tuple<BigInteger, Long>>() {
-      StreamInputReader reader;
+      FileReader reader;
 
       private TSetContext ctx;
 
@@ -69,7 +71,12 @@ public class InputPartitionJob implements IWorker, Serializable {
       public void prepare(TSetContext context) {
         this.ctx = context;
         prefix = context.getConfig().getStringValue(Context.ARG_FILE_PREFIX);
-        reader = new StreamInputReader(prefix + "/data/input-" + context.getIndex(), context.getConfig());
+        boolean csv = context.getConfig().getBooleanValue(Context.ARG_CSV);
+        if (!csv) {
+          reader = new StreamInputReader(prefix + "/data/input-" + context.getIndex(), context.getConfig());
+        } else {
+          reader = new CSVStreamInputReader(prefix + "/csvData/input-" + context.getIndex(), context.getConfig());
+        }
       }
 
       @Override
@@ -107,7 +114,12 @@ public class InputPartitionJob implements IWorker, Serializable {
       public void prepare(TSetContext context) {
         try {
           String prefix = context.getConfig().getStringValue(Context.ARG_FILE_PREFIX);
-          writer = new TweetBufferedOutputWriter(prefix + "/data/outfile-" + context.getIndex(), context.getConfig());
+          boolean csv = context.getConfig().getBooleanValue(Context.ARG_CSV);
+          if (!csv) {
+            writer = new TweetBufferedOutputWriter(prefix + "/data/outfile-" + context.getIndex(), context.getConfig());
+          } else {
+            writer = new TweetBufferedOutputWriter(prefix + "/csvDataOut/outfile-" + context.getIndex(), context.getConfig());
+          }
           this.context = context;
         } catch (FileNotFoundException e) {
           throw new RuntimeException("Failed to write", e);
