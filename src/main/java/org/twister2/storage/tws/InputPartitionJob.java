@@ -112,11 +112,13 @@ public class InputPartitionJob implements IWorker, Serializable {
 
       TSetContext context;
 
+      boolean csv;
+
       @Override
       public void prepare(TSetContext context) {
         try {
           String prefix = context.getConfig().getStringValue(Context.ARG_FILE_PREFIX);
-          boolean csv = context.getConfig().getBooleanValue(Context.ARG_CSV);
+          csv = context.getConfig().getBooleanValue(Context.ARG_CSV);
           if (!csv) {
             writer = new TweetBufferedOutputWriter(prefix + "/data/outfile-" + context.getIndex(), context.getConfig());
           } else {
@@ -134,7 +136,11 @@ public class InputPartitionJob implements IWorker, Serializable {
         while (value.hasNext()) {
           try {
             Tuple<BigInteger, Iterator<Long>> next = value.next();
-            writer.write(next.getKey(), next.getValue().next());
+            if (!csv) {
+              writer.write(next.getKey(), next.getValue().next());
+            } else {
+              writer.write(next.getKey() + "," + next.getValue().next());
+            }
           } catch (Exception e) {
             throw new RuntimeException("Failed to write", e);
           }

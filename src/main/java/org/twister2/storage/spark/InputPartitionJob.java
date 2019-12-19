@@ -1,28 +1,33 @@
 package org.twister2.storage.spark;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapred.TextOutputFormat;
-import org.apache.spark.HashPartitioner;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
+import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.function.PairFunction;
+import scala.Tuple2;
 
 import java.math.BigInteger;
-import java.util.Comparator;
 
 public class InputPartitionJob {
   public static void main(String[] args) {
     SparkConf conf = new SparkConf().setAppName("terasort");
     Configuration configuration = new Configuration();
+
+    String prefix = args[0] + "/csvData";
+    int parallel = Integer.parseInt(args[1]);
+
     JavaSparkContext sc = new JavaSparkContext(conf);
-    JavaPairRDD<BigInteger, Long> input = sc.newAPIHadoopRDD(configuration, BinaryInput.class, BigInteger.class, Long.class);
-    JavaPairRDD<BigInteger, Long> sorted = input.repartitionAndSortWithinPartitions(new HashPartitioner(4), new Comparator<BigInteger>() {
+    JavaRDD<String> input = sc.textFile(prefix, parallel);
+
+    JavaPairRDD<BigInteger, Long>  source = input.mapToPair(new PairFunction<String, BigInteger, Long>() {
       @Override
-      public int compare(BigInteger o1, BigInteger o2) {
-        return o1.compareTo(o2);
+      public Tuple2<BigInteger, Long> call(String s) throws Exception {
+        String[] a = s.split(",");
+        return new Tuple2<>(new BigInteger(a[0]), Long.parseLong(a[1]));
       }
     });
-    sorted.saveAsHadoopFile("out", BigInteger.class, Long.class, TextOutputFormat.class);
-    sc.stop();
+    source.sortByKey().saveAsTextFile(args[0] + "/sparkOut");
   }
 }
