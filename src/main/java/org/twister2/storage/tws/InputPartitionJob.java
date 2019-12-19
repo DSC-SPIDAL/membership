@@ -37,10 +37,12 @@ public class InputPartitionJob implements IWorker, Serializable {
     String filePrefix = args[0];
     int parallel = Integer.parseInt(args[1]);
     int memory = Integer.parseInt(args[2]);
+    boolean csv = Boolean.parseBoolean(args[3]);
 
     jobConfig.put(Context.ARG_FILE_PREFIX, filePrefix);
     jobConfig.put(Context.ARG_PARALLEL, parallel);
     jobConfig.put(Context.ARG_MEMORY, memory);
+    jobConfig.put(Context.ARG_CSV, csv);
 
     Twister2Job twister2Job;
     twister2Job = Twister2Job.newBuilder()
