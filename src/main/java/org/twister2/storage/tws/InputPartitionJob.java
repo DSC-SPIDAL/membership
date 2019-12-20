@@ -143,7 +143,7 @@ public class InputPartitionJob implements IWorker, Serializable {
             builder.append(next.getKey().toString()).append(",").append(next.getValue()).append("\n");
             if (i > 0 && i % 10000 == 0) {
               if (csv) {
-                writer.write(builder.toString());
+                writer.writeWithoutEnd(builder.toString());
                 builder = new StringBuilder();
               } else {
                 writer.write(next.getKey() + "," + next.getValue().next());
@@ -156,7 +156,7 @@ public class InputPartitionJob implements IWorker, Serializable {
 
         if (csv) {
           try {
-            writer.write(builder.toString());
+            writer.writeWithoutEnd(builder.toString());
           } catch (Exception e) {
             throw new RuntimeException("Failed to write", e);
           }

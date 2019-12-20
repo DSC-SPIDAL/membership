@@ -41,7 +41,7 @@ public class WritingJob implements IWorker {
         builder.append(bi.toString()).append(",").append(workerID).append("\n");
         if (i > 0 && (i % 10000 == 0 || i == records - 1)) {
           if (csv) {
-            outputWriter.write(builder.toString());
+            outputWriter.writeWithoutEnd(builder.toString());
             builder = new StringBuilder();
           } else {
             outputWriter.write(bi, (long) workerID);

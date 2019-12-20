@@ -55,6 +55,14 @@ public class TweetBufferedOutputWriter {
     }
   }
 
+  public void writeWithoutEnd(String w) throws Exception {
+    try {
+      this.out.write(w.getBytes());
+    } catch (IOException e) {
+      throw new Exception("Failed to write the tuple", e);
+    }
+  }
+
   public void close() {
     try {
       out.flush();
