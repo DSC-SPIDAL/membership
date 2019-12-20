@@ -6,7 +6,6 @@ import edu.iu.dsc.tws.api.comms.structs.Tuple;
 import edu.iu.dsc.tws.api.config.Config;
 import edu.iu.dsc.tws.api.resource.*;
 import edu.iu.dsc.tws.api.tset.TSetContext;
-import edu.iu.dsc.tws.api.tset.fn.MapFunc;
 import edu.iu.dsc.tws.api.tset.fn.SinkFunc;
 import edu.iu.dsc.tws.api.tset.fn.SourceFunc;
 import edu.iu.dsc.tws.rsched.core.ResourceAllocator;
@@ -62,7 +61,7 @@ public class InputPartitionJob implements IWorker, Serializable {
         config, workerID, workerController, persistentVolume, volatileVolume));
     int parallel = config.getIntegerValue(Context.ARG_PARALLEL);
     // first we are going to read the files and sort them
-    SinkTSet<Iterator<Tuple<BigInteger, Iterator<Long>>>> sink1 = batchEnv.createKeyedSource(new SourceFunc<Tuple<BigInteger, Long>>() {
+    SinkTSet<Iterator<Tuple<BigInteger, Long>>> sink1 = batchEnv.createKeyedSource(new SourceFunc<Tuple<BigInteger, Long>>() {
       FileReader reader;
 
       private TSetContext ctx;
@@ -102,12 +101,12 @@ public class InputPartitionJob implements IWorker, Serializable {
           throw new RuntimeException("Failed to read next", e);
         }
       }
-    }, parallel).keyedGather(new HashingPartitioner<>(), new Comparator<BigInteger>() {
+    }, parallel).keyedGatherUngrouped(new HashingPartitioner<>(), new Comparator<BigInteger>() {
       @Override
       public int compare(BigInteger o1, BigInteger o2) {
         return o1.compareTo(o2);
       }
-    }).useDisk().sink(new SinkFunc<Iterator<Tuple<BigInteger, Iterator<Long>>>>() {
+    }).useDisk().sink(new SinkFunc<Iterator<Tuple<BigInteger, Long>>>() {
       TweetBufferedOutputWriter writer;
 
       TSetContext context;
@@ -134,13 +133,12 @@ public class InputPartitionJob implements IWorker, Serializable {
         }
       }
 
-
       @Override
-      public boolean add(Iterator<Tuple<BigInteger, Iterator<Long>>> value) {
+      public boolean add(Iterator<Tuple<BigInteger, Long>> value) {
         LOG.info("Starting to save");
         while (value.hasNext()) {
           try {
-            Tuple<BigInteger, Iterator<Long>> next = value.next();
+            Tuple<BigInteger, Long> next = value.next();
 
             builder.append(next.getKey().toString()).append(",").append(next.getValue()).append("\n");
             if (i > 0 && i % 10000 == 0) {
@@ -148,7 +146,7 @@ public class InputPartitionJob implements IWorker, Serializable {
                 writer.writeWithoutEnd(builder.toString());
                 builder = new StringBuilder();
               } else {
-                writer.write(next.getKey() + "," + next.getValue().next());
+                writer.write(next.getKey() + "," + next.getValue());
               }
             }
             i++;
@@ -169,7 +167,6 @@ public class InputPartitionJob implements IWorker, Serializable {
         return true;
       }
     });
-
     batchEnv.eval(sink1);
   }
 }
