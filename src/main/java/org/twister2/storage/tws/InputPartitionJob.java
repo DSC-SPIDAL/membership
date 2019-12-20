@@ -130,21 +130,38 @@ public class InputPartitionJob implements IWorker, Serializable {
         }
       }
 
+      int i = 0;
+
+      StringBuilder builder = new StringBuilder();
       @Override
       public boolean add(Iterator<Tuple<BigInteger, Iterator<Long>>> value) {
         LOG.info("Starting to save");
         while (value.hasNext()) {
           try {
             Tuple<BigInteger, Iterator<Long>> next = value.next();
-            if (!csv) {
-              writer.write(next.getKey(), next.getValue().next());
-            } else {
-              writer.write(next.getKey() + "," + next.getValue().next());
+
+            builder.append(next.getKey().toString()).append(",").append(next.getValue()).append("\n");
+            if (i > 0 && i % 10000 == 0) {
+              if (csv) {
+                writer.write(builder.toString());
+                builder = new StringBuilder();
+              } else {
+                writer.write(next.getKey() + "," + next.getValue().next());
+              }
             }
           } catch (Exception e) {
             throw new RuntimeException("Failed to write", e);
           }
         }
+
+        if (csv) {
+          try {
+            writer.write(builder.toString());
+          } catch (Exception e) {
+            throw new RuntimeException("Failed to write", e);
+          }
+        }
+
         writer.close();
         return true;
       }
