@@ -18,8 +18,6 @@ import java.util.logging.Logger;
 public class WritingJob implements IWorker {
   private static final Logger LOG = Logger.getLogger(WritingJob.class.getName());
 
-  private static int records = 10000000;
-
   @Override
   public void execute(Config config, int workerID,
                       IWorkerController workerController,
@@ -27,6 +25,7 @@ public class WritingJob implements IWorker {
                       IVolatileVolume volatileVolume) {
     String prefix = config.getStringValue(Context.ARG_FILE_PREFIX);
     boolean csv = config.getBooleanValue(Context.ARG_CSV);
+    int records = config.getIntegerValue(Context.ARG_TUPLES);
     try {
       String data = csv ? "csv" : "";
       TweetBufferedOutputWriter outputWriter = new TweetBufferedOutputWriter(prefix + "/" + data + "Data/input-" + workerID, config);
@@ -73,10 +72,13 @@ public class WritingJob implements IWorker {
     int parallel = Integer.parseInt(args[1]);
     int memory = Integer.parseInt(args[2]);
     boolean csv = Boolean.parseBoolean(args[3]);
+    int tuples = Integer.parseInt(args[4]);
+
     JobConfig jobConfig = new JobConfig();
 
     jobConfig.put(Context.ARG_FILE_PREFIX, filePrefix);
     jobConfig.put(Context.ARG_CSV, csv);
+    jobConfig.put(Context.ARG_TUPLES, tuples);
 
     Twister2Job twister2Job;
     twister2Job = Twister2Job.newBuilder()
