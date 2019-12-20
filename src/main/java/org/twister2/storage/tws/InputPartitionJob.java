@@ -24,6 +24,10 @@ import java.math.BigInteger;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class InputPartitionJob implements IWorker, Serializable {
@@ -117,6 +121,9 @@ public class InputPartitionJob implements IWorker, Serializable {
 
       StringBuilder builder = new StringBuilder();
 
+      private BlockingQueue<Tuple<StringBuilder, Boolean>> queue = new ArrayBlockingQueue<>(1000);
+      Thread thread;
+
       @Override
       public void prepare(TSetContext context) {
         try {
@@ -128,6 +135,8 @@ public class InputPartitionJob implements IWorker, Serializable {
             writer = new TweetBufferedOutputWriter(prefix + "/csvDataOut/outfile-" + context.getIndex(), context.getConfig());
           }
           this.context = context;
+          this.thread = new Thread(new ConsumingThread(queue, writer));
+          this.thread.start();
         } catch (FileNotFoundException e) {
           throw new RuntimeException("Failed to write", e);
         }
@@ -143,7 +152,7 @@ public class InputPartitionJob implements IWorker, Serializable {
             builder.append(next.getKey().toString()).append(",").append(next.getValue()).append("\n");
             if (i > 0 && i % 10000 == 0) {
               if (csv) {
-                writer.writeWithoutEnd(builder.toString());
+                queue.put(new Tuple<>(builder, false));
                 builder = new StringBuilder();
               } else {
                 writer.write(next.getKey() + "," + next.getValue());
@@ -157,16 +166,51 @@ public class InputPartitionJob implements IWorker, Serializable {
 
         if (csv) {
           try {
-            writer.writeWithoutEnd(builder.toString());
+            queue.put(new Tuple<>(builder, true));
           } catch (Exception e) {
             throw new RuntimeException("Failed to write", e);
           }
         }
 
+        try {
+          thread.join();
+        } catch (InterruptedException e) {
+          LOG.info("Interrupted");
+        }
         writer.close();
         return true;
       }
     });
     batchEnv.eval(sink1);
+  }
+
+  private static class ConsumingThread implements Runnable {
+    private BlockingQueue<Tuple<StringBuilder, Boolean>> queue;
+
+    TweetBufferedOutputWriter writer;
+
+    public ConsumingThread(BlockingQueue<Tuple<StringBuilder, Boolean>> queue,
+                           TweetBufferedOutputWriter writer) {
+      this.queue = queue;
+      this.writer = writer;
+    }
+
+    @Override
+    public void run() {
+      while (true) {
+        try {
+          Tuple<StringBuilder, Boolean> value = queue.take();
+          writer.writeWithoutEnd(value.toString());
+          if (value.getValue()) {
+            break;
+          }
+        } catch (InterruptedException e) {
+          LOG.log(Level.INFO, "Interrupted", e);
+          break;
+        } catch (Exception e) {
+          throw new RuntimeException("Failed to write", e);
+        }
+      }
+    }
   }
 }

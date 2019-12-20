@@ -18,7 +18,7 @@ import java.util.logging.Logger;
 public class WritingJob implements IWorker {
   private static final Logger LOG = Logger.getLogger(WritingJob.class.getName());
 
-  private static int records = 100000000;
+  private static int records = 10000000;
 
   @Override
   public void execute(Config config, int workerID,
