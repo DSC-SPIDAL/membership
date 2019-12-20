@@ -1,6 +1,7 @@
 package org.twister2.storage.spark;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.spark.HashPartitioner;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -28,6 +29,6 @@ public class InputPartitionJob {
         return new Tuple2<>(new BigInteger(a[0]), Long.parseLong(a[1]));
       }
     });
-    source.sortByKey().saveAsTextFile(args[0] + "/sparkOut");
+    source.repartitionAndSortWithinPartitions(new HashPartitioner(parallel)).saveAsTextFile(args[0] + "/sparkOut");
   }
 }
