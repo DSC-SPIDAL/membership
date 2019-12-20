@@ -114,6 +114,10 @@ public class InputPartitionJob implements IWorker, Serializable {
 
       boolean csv;
 
+      int i = 0;
+
+      StringBuilder builder = new StringBuilder();
+
       @Override
       public void prepare(TSetContext context) {
         try {
@@ -130,9 +134,7 @@ public class InputPartitionJob implements IWorker, Serializable {
         }
       }
 
-      int i = 0;
 
-      StringBuilder builder = new StringBuilder();
       @Override
       public boolean add(Iterator<Tuple<BigInteger, Iterator<Long>>> value) {
         LOG.info("Starting to save");
@@ -149,6 +151,7 @@ public class InputPartitionJob implements IWorker, Serializable {
                 writer.write(next.getKey() + "," + next.getValue().next());
               }
             }
+            i++;
           } catch (Exception e) {
             throw new RuntimeException("Failed to write", e);
           }
