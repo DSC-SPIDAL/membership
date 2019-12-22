@@ -121,7 +121,7 @@ public class InputPartitionJob implements IWorker, Serializable {
 
       StringBuilder builder = new StringBuilder();
 
-      private BlockingQueue<Tuple<StringBuilder, Boolean>> queue = new ArrayBlockingQueue<>(1000);
+      private BlockingQueue<Tuple<StringBuilder, Boolean>> queue = new ArrayBlockingQueue<>(10);
       Thread thread;
 
       @Override
