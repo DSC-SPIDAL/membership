@@ -41,11 +41,13 @@ public class InputPartitionJob implements IWorker, Serializable {
     int parallel = Integer.parseInt(args[1]);
     int memory = Integer.parseInt(args[2]);
     boolean csv = Boolean.parseBoolean(args[3]);
+    boolean write = Boolean.parseBoolean(args[4]);
 
     jobConfig.put(Context.ARG_FILE_PREFIX, filePrefix);
     jobConfig.put(Context.ARG_PARALLEL, parallel);
     jobConfig.put(Context.ARG_MEMORY, memory);
     jobConfig.put(Context.ARG_CSV, csv);
+    jobConfig.put(Context.ARG_WRITE, write);
 
     Twister2Job twister2Job;
     twister2Job = Twister2Job.newBuilder()
@@ -134,8 +136,9 @@ public class InputPartitionJob implements IWorker, Serializable {
           } else {
             writer = new TweetBufferedOutputWriter(prefix + "/csvDataOut/outfile-" + context.getIndex(), context.getConfig());
           }
+          boolean write = context.getConfig().getBooleanValue(Context.ARG_CSV);
           this.context = context;
-          this.thread = new Thread(new ConsumingThread(queue, writer));
+          this.thread = new Thread(new ConsumingThread(queue, writer, write));
           this.thread.start();
         } catch (FileNotFoundException e) {
           throw new RuntimeException("Failed to write", e);
@@ -189,10 +192,13 @@ public class InputPartitionJob implements IWorker, Serializable {
 
     TweetBufferedOutputWriter writer;
 
+    boolean write;
+
     public ConsumingThread(BlockingQueue<Tuple<StringBuilder, Boolean>> queue,
-                           TweetBufferedOutputWriter writer) {
+                           TweetBufferedOutputWriter writer, boolean write) {
       this.queue = queue;
       this.writer = writer;
+      this.write = write;
     }
 
     @Override
@@ -200,9 +206,11 @@ public class InputPartitionJob implements IWorker, Serializable {
       while (true) {
         try {
           Tuple<StringBuilder, Boolean> value = queue.take();
-          writer.writeWithoutEnd(value.toString());
-          if (value.getValue()) {
-            break;
+          if (write) {
+            writer.writeWithoutEnd(value.toString());
+            if (value.getValue()) {
+              break;
+            }
           }
         } catch (InterruptedException e) {
           LOG.log(Level.INFO, "Interrupted", e);
