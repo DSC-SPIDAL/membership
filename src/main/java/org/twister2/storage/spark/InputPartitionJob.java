@@ -19,6 +19,7 @@ public class InputPartitionJob {
     String prefix = args[0] + "/csvData";
     int parallel = Integer.parseInt(args[1]);
     boolean justCSV = Boolean.parseBoolean(args[2]);
+    boolean out = Boolean.parseBoolean(args[3]);
 
     JavaSparkContext sc = new JavaSparkContext(conf);
     JavaRDD<String> input = sc.textFile(prefix, parallel);
@@ -31,9 +32,18 @@ public class InputPartitionJob {
       }
     });
     if (justCSV) {
-      source.saveAsTextFile(args[0] + "/sparkOut2");
+      if (out) {
+        source.saveAsTextFile(args[0] + "/sparkOut2");
+      } else {
+        source.saveAsHadoopFile(args[0] + "/sparkOut2", BigInteger.class, Long.class, ByteOutputFormat.class);
+      }
     } else {
-      source.repartitionAndSortWithinPartitions(new HashPartitioner(parallel)).saveAsTextFile(args[0] + "/sparkOut");
+      if (out) {
+        source.repartitionAndSortWithinPartitions(new HashPartitioner(parallel)).saveAsTextFile(args[0] + "/sparkOut");
+      } else {
+        source.repartitionAndSortWithinPartitions(new HashPartitioner(parallel)).saveAsHadoopFile(
+            args[0] + "/sparkOut", BigInteger.class, Long.class, ByteOutputFormat.class);
+      }
     }
   }
 }
