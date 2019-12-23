@@ -128,6 +128,8 @@ public class InputPartitionJob implements IWorker, Serializable {
       private BlockingQueue<Tuple<StringBuilder, Boolean>> queue = new ArrayBlockingQueue<>(10);
       Thread thread;
 
+      boolean write;
+
       @Override
       public void prepare(TSetContext context) {
         try {
@@ -138,7 +140,7 @@ public class InputPartitionJob implements IWorker, Serializable {
           } else {
             writer = new TweetBufferedOutputWriter(prefix + "/csvDataOut/outfile-" + context.getIndex(), context.getConfig());
           }
-          boolean write = context.getConfig().getBooleanValue(Context.ARG_WRITE);
+          this.write = context.getConfig().getBooleanValue(Context.ARG_WRITE);
           this.context = context;
           this.thread = new Thread(new ConsumingThread(queue, writer, write));
           this.thread.start();
@@ -150,37 +152,43 @@ public class InputPartitionJob implements IWorker, Serializable {
       @Override
       public boolean add(Iterator<Tuple<BigInteger, Long>> value) {
         LOG.info("Starting to save");
-        while (value.hasNext()) {
-          try {
-            Tuple<BigInteger, Long> next = value.next();
+        if (write) {
+          while (value.hasNext()) {
+            try {
+              Tuple<BigInteger, Long> next = value.next();
 
-            builder.append(next.getKey().toString()).append(",").append(next.getValue()).append("\n");
-            if (i > 0 && i % 10000 == 0) {
-              if (csv) {
-                queue.put(new Tuple<>(builder, false));
-                builder = new StringBuilder();
-              } else {
-                writer.write(next.getKey() + "," + next.getValue());
+              builder.append(next.getKey().toString()).append(",").append(next.getValue()).append("\n");
+              if (i > 0 && i % 10000 == 0) {
+                if (csv) {
+                  queue.put(new Tuple<>(builder, false));
+                  builder = new StringBuilder();
+                } else {
+                  writer.write(next.getKey() + "," + next.getValue());
+                }
               }
+              i++;
+            } catch (Exception e) {
+              throw new RuntimeException("Failed to write", e);
             }
-            i++;
-          } catch (Exception e) {
-            throw new RuntimeException("Failed to write", e);
           }
-        }
 
-        if (csv) {
+          if (csv) {
+            try {
+              queue.put(new Tuple<>(builder, true));
+            } catch (Exception e) {
+              throw new RuntimeException("Failed to write", e);
+            }
+          }
+
           try {
-            queue.put(new Tuple<>(builder, true));
-          } catch (Exception e) {
-            throw new RuntimeException("Failed to write", e);
+            thread.join();
+          } catch (InterruptedException e) {
+            LOG.info("Interrupted");
           }
-        }
-
-        try {
-          thread.join();
-        } catch (InterruptedException e) {
-          LOG.info("Interrupted");
+        } else {
+          while (value.hasNext()) {
+            value.next();
+          }
         }
         writer.close();
         return true;
@@ -208,11 +216,9 @@ public class InputPartitionJob implements IWorker, Serializable {
       while (true) {
         try {
           Tuple<StringBuilder, Boolean> value = queue.take();
-          if (write) {
-            writer.writeWithoutEnd(value.toString());
-            if (value.getValue()) {
-              break;
-            }
+          writer.writeWithoutEnd(value.toString());
+          if (value.getValue()) {
+            break;
           }
         } catch (InterruptedException e) {
           LOG.log(Level.INFO, "Interrupted", e);
