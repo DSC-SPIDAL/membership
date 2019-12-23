@@ -142,8 +142,10 @@ public class InputPartitionJob implements IWorker, Serializable {
           }
           this.write = context.getConfig().getBooleanValue(Context.ARG_WRITE);
           this.context = context;
-          this.thread = new Thread(new ConsumingThread(queue, writer, write));
-          this.thread.start();
+          if (write) {
+            this.thread = new Thread(new ConsumingThread(queue, writer, write));
+            this.thread.start();
+          }
         } catch (FileNotFoundException e) {
           throw new RuntimeException("Failed to write", e);
         }
@@ -151,7 +153,7 @@ public class InputPartitionJob implements IWorker, Serializable {
 
       @Override
       public boolean add(Iterator<Tuple<BigInteger, Long>> value) {
-        LOG.info("Starting to save");
+        LOG.info("Starting to save write: " + write);
         if (write) {
           while (value.hasNext()) {
             try {
