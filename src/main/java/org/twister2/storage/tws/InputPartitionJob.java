@@ -43,6 +43,8 @@ public class InputPartitionJob implements IWorker, Serializable {
     boolean csv = Boolean.parseBoolean(args[3]);
     boolean write = Boolean.parseBoolean(args[4]);
 
+    LOG.info(String.format("Parameters file %s, parallel %d, memory %d, csv %b, write %b", filePrefix, parallel, memory, csv, write));
+
     jobConfig.put(Context.ARG_FILE_PREFIX, filePrefix);
     jobConfig.put(Context.ARG_PARALLEL, parallel);
     jobConfig.put(Context.ARG_MEMORY, memory);
@@ -136,7 +138,7 @@ public class InputPartitionJob implements IWorker, Serializable {
           } else {
             writer = new TweetBufferedOutputWriter(prefix + "/csvDataOut/outfile-" + context.getIndex(), context.getConfig());
           }
-          boolean write = context.getConfig().getBooleanValue(Context.ARG_CSV);
+          boolean write = context.getConfig().getBooleanValue(Context.ARG_WRITE);
           this.context = context;
           this.thread = new Thread(new ConsumingThread(queue, writer, write));
           this.thread.start();
