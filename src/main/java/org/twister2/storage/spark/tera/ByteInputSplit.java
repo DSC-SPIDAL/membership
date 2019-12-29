@@ -23,6 +23,9 @@ public class ByteInputSplit extends InputSplit implements Writable {
     this.node = node;
   }
 
+  public ByteInputSplit() {
+  }
+
   @Override
   public long getLength() throws IOException, InterruptedException {
     return elements * 100;
@@ -50,6 +53,18 @@ public class ByteInputSplit extends InputSplit implements Writable {
   @Override
   public void readFields(DataInput dataInput) throws IOException {
 
+  }
+
+  public void setElements(int elements) {
+    this.elements = elements;
+  }
+
+  public void setKeySize(int keySize) {
+    this.keySize = keySize;
+  }
+
+  public void setDataSize(int dataSize) {
+    this.dataSize = dataSize;
   }
 
   public int getElements() {
