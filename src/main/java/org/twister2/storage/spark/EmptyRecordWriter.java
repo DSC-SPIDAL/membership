@@ -4,11 +4,10 @@ import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
 
 import java.io.IOException;
-import java.math.BigInteger;
 
-public class EmptyRecordWriter implements RecordWriter<BigInteger, Long> {
+public class EmptyRecordWriter<T, V> implements RecordWriter<T, V> {
   @Override
-  public void write(BigInteger bi, Long lo) throws IOException {
+  public void write(T bi, V lo) throws IOException {
   }
 
   @Override

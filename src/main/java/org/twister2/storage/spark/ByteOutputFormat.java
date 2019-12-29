@@ -7,15 +7,14 @@ import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.util.Progressable;
 
 import java.io.IOException;
-import java.math.BigInteger;
 
-public class ByteOutputFormat implements OutputFormat<BigInteger, Long> {
+public class ByteOutputFormat<T, V> implements OutputFormat<T, V> {
 
   @Override
-  public RecordWriter<BigInteger, Long> getRecordWriter(FileSystem fileSystem,
+  public RecordWriter<T, V> getRecordWriter(FileSystem fileSystem,
                                                         JobConf jobConf, String s,
                                                         Progressable progressable) throws IOException {
-    return new EmptyRecordWriter();
+    return new EmptyRecordWriter<T, V>();
   }
 
   @Override
