@@ -4,8 +4,11 @@ import org.apache.spark.Partitioner;
 
 import java.io.Serializable;
 import java.util.*;
+import java.util.logging.Logger;
 
 public class TeraSortPartitioner extends Partitioner implements Serializable {
+  private static final Logger LOG = Logger.getLogger(TeraSortPartitioner.class.getName());
+
   private int partitions;
   private int keysToOneTask;
   private List<Integer> destinationsList;
@@ -21,6 +24,7 @@ public class TeraSortPartitioner extends Partitioner implements Serializable {
 
   @Override
   public int getPartition(Object key) {
+    LOG.info("Partition with key size: " + ((byte[]) key).length);
     return partition((byte[]) key);
   }
 
