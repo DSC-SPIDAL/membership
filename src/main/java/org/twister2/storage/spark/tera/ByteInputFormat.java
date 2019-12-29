@@ -37,8 +37,7 @@ public class ByteInputFormat extends InputFormat<byte[], byte[]> {
                                                          TaskAttemptContext taskAttemptContext)
       throws IOException, InterruptedException {
     if (inputSplit instanceof ByteInputSplit) {
-      ByteInputSplit split = (ByteInputSplit) inputSplit;
-      return new ByteRecordReader(split.getElements(), split.getKeySize(), split.getDataSize());
+      return new ByteRecordReader();
     } else {
       throw new RuntimeException("Un-expected split");
     }

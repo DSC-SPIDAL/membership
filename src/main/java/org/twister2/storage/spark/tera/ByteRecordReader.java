@@ -14,17 +14,21 @@ public class ByteRecordReader extends RecordReader<byte[], byte[]> {
   private int keySize;
   private int dataSize;
 
-  public ByteRecordReader(int numRecords, int keySize, int dataSize) {
-    this.numRecords = numRecords;
-    this.keySize = keySize;
-    this.dataSize = dataSize;
+  public ByteRecordReader() {
     random = new Random(System.nanoTime());
   }
 
   @Override
   public void initialize(InputSplit inputSplit, TaskAttemptContext taskAttemptContext)
       throws IOException, InterruptedException {
-
+    if (inputSplit instanceof ByteInputSplit) {
+      ByteInputSplit split = (ByteInputSplit) inputSplit;
+      numRecords = split.getElements();
+      keySize = split.getKeySize();
+      dataSize = split.getDataSize();
+    } else {
+      throw new IOException("Not a ByteInputSplit");
+    }
   }
 
   @Override
