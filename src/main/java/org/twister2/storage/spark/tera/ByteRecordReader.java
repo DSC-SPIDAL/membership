@@ -6,8 +6,11 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import java.io.IOException;
 import java.util.Random;
+import java.util.logging.Logger;
 
 public class ByteRecordReader extends RecordReader<byte[], byte[]> {
+  private static final Logger LOG = Logger.getLogger(ByteRecordReader.class.getName());
+
   private int numRecords;
   private int currentRead = 0;
   private Random random;
@@ -26,6 +29,7 @@ public class ByteRecordReader extends RecordReader<byte[], byte[]> {
       numRecords = split.getElements();
       keySize = split.getKeySize();
       dataSize = split.getDataSize();
+      LOG.info(String.format("Records %d, key %d, data %d", numRecords, keySize, dataSize));
     } else {
       throw new IOException("Not a ByteInputSplit");
     }
