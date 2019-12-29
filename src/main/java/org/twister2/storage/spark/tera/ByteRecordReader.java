@@ -44,6 +44,7 @@ public class ByteRecordReader extends RecordReader<byte[], byte[]> {
   public byte[] getCurrentKey() throws IOException, InterruptedException {
     byte[] key = new byte[keySize];
     random.nextBytes(key);
+    LOG.info("Key size " + keySize);
     return key;
   }
 
@@ -51,6 +52,7 @@ public class ByteRecordReader extends RecordReader<byte[], byte[]> {
   public byte[] getCurrentValue() throws IOException, InterruptedException {
     byte[] key = new byte[dataSize];
     random.nextBytes(key);
+    LOG.info("Data size " + keySize);
     return key;
   }
 
