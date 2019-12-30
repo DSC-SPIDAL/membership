@@ -12,7 +12,7 @@ public class TeraSortJob {
   public static final String ARG_DATA_SIZE = "dataSize";
 
   public static void main(String[] args) {
-    SparkConf conf = new SparkConf().setAppName("terasort").setMaster("spark://127.0.0.1:7077");
+    SparkConf conf = new SparkConf().setAppName("terasort");
     Configuration configuration = new Configuration();
     configuration.set(Context.ARG_TUPLES, args[0]);
     configuration.set(Context.ARG_PARALLEL, args[1]);
