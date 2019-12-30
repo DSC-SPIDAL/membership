@@ -14,10 +14,17 @@ public class TeraSortJob {
   public static void main(String[] args) {
     SparkConf conf = new SparkConf().setAppName("terasort");
     Configuration configuration = new Configuration();
-    configuration.set(Context.ARG_TUPLES, args[0]);
+
+    double size = Double.parseDouble(args[0]);
+    int keySize = Integer.parseInt(args[2]);
+    int dataSize = Integer.parseInt(args[3]);
+    int tuples = (int) (size * 1024 * 1024 * 1024 / (keySize + dataSize));
+
+    configuration.set(Context.ARG_TUPLES, tuples + "");
     configuration.set(Context.ARG_PARALLEL, args[1]);
     configuration.set(ARG_KEY_SIZE, args[2]);
     configuration.set(ARG_DATA_SIZE, args[3]);
+
 
     JavaSparkContext sc = new JavaSparkContext(conf);
     JavaPairRDD<byte[], byte[]> input = sc.newAPIHadoopRDD(configuration, ByteInputFormat.class, byte[].class, byte[].class);
