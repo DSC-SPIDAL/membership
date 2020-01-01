@@ -1,6 +1,7 @@
 package org.twister2.storage.spark.tera;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -19,6 +20,7 @@ public class TeraSortJob {
     int keySize = Integer.parseInt(args[2]);
     int dataSize = Integer.parseInt(args[3]);
     int tuples = (int) (size * 1024 * 1024 * 1024 / (keySize + dataSize));
+    boolean writeToFile = Boolean.parseBoolean(args[4]);
 
     configuration.set(Context.ARG_TUPLES, tuples + "");
     configuration.set(Context.ARG_PARALLEL, args[1]);
@@ -30,7 +32,11 @@ public class TeraSortJob {
     JavaPairRDD<byte[], byte[]> input = sc.newAPIHadoopRDD(configuration, ByteInputFormat.class, byte[].class, byte[].class);
     JavaPairRDD<byte[], byte[]> sorted = input.repartitionAndSortWithinPartitions(new TeraSortPartitioner(input.partitions().size()), new ByteComparator());
 
-    sorted.saveAsHadoopFile("out", byte[].class, byte[].class, ByteOutputFormat.class);
+    if (writeToFile) {
+      sorted.saveAsHadoopFile("out", byte[].class, byte[].class, ByteOutputFormat.class);
+    } else {
+      sorted.saveAsTextFile(args[5]);
+    }
     sc.stop();
   }
 }
